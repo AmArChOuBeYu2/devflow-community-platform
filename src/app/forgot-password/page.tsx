@@ -233,7 +233,7 @@ export default function ForgotPasswordPage() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\\D/g, ""))}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="Enter the 6-digit code"
                   required
                   className="w-full px-3.5 py-2.5 text-center text-base font-mono tracking-[0.3em] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
