@@ -185,7 +185,7 @@ export interface SubscriptionInvoice {
   userEmail: string;
   planTier: UserTier;
   amount: number; // in INR
-  status: "paid" | "failed";
+  status: "paid" | "failed" | "demo";
   paymentMethod: string;
   paymentId: string;
   billingDate: string;
