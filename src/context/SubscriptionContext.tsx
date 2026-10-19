@@ -89,7 +89,7 @@ interface SubscriptionContextType {
   currentTier: UserTier;
   currentPlan: PlanDetails;
   invoices: SubscriptionInvoice[];
-  upgradePlan: (targetTier: UserTier, paymentMethod?: string) => Promise<{ success: boolean; invoice: SubscriptionInvoice }>;
+  upgradePlan: (targetTier: UserTier, paymentMethod?: string, verifiedPaymentId?: string) => Promise<{ success: boolean; invoice: SubscriptionInvoice }>;
   downloadInvoicePdf: (invoice: SubscriptionInvoice) => void;
   canAskQuestionToday: () => { allowed: boolean; remaining: number | "unlimited"; limit: number | "unlimited"; message?: string };
   recordQuestionAsked: () => void;
@@ -143,7 +143,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const upgradePlan = async (
     targetTier: UserTier,
-    paymentMethod = "Razorpay UPI / Cards"
+    paymentMethod = "Demo Checkout (no charge)",
+    verifiedPaymentId?: string
   ): Promise<{ success: boolean; invoice: SubscriptionInvoice }> => {
     const targetPlan = SUBSCRIPTION_PLANS[targetTier];
     const now = new Date();
@@ -159,9 +160,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       userEmail: user?.email || "sc62970@gmail.com",
       planTier: targetTier,
       amount: targetPlan.price,
-      status: "paid",
+      status: verifiedPaymentId ? "paid" : "demo",
       paymentMethod,
-      paymentId: `pay_Rzp_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+      paymentId: verifiedPaymentId || "DEMO-NO-CHARGE",
       billingDate: now.toISOString(),
       renewalDate: renewal.toISOString(),
     };
@@ -185,7 +186,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         senderName: "Billing System",
         senderAvatar: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=100&auto=format&fit=crop&q=80",
         type: "subscription",
-        message: `Invoice ${invNum} paid: You have successfully upgraded to the ${targetPlan.name}!`,
+        message: verifiedPaymentId ? `Payment verified. Invoice ${invNum}: your ${targetPlan.name} is active.` : `Demo checkout only (no charge). ${targetPlan.name} enabled in this browser for evaluation.`,
         link: "/profile",
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -205,7 +206,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("DevFlow Community - Official Tax Invoice", 14, 16);
+    doc.text("DevFlow Community - Subscription Receipt", 14, 16);
 
     // Invoice Metadata
     doc.setTextColor(40, 40, 40);
@@ -216,7 +217,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.text(`Next Renewal: ${new Date(invoice.renewalDate).toLocaleDateString()}`, 14, 52);
     doc.text(`Payment Gateway: Razorpay`, 14, 59);
     doc.text(`Transaction ID: ${invoice.paymentId}`, 14, 66);
-    doc.text(`Status: PAID (Verified)`, 14, 73);
+    doc.text(`Status: ${invoice.status === "paid" ? "PAID (verified)" : invoice.status === "demo" ? "DEMO ONLY - NO CHARGE" : "FAILED"}`, 14, 73);
 
     // Customer details
     doc.text("Billed To:", 130, 38);
@@ -251,7 +252,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(120, 120, 120);
-    doc.text("This is an electronically generated receipt for your Elevance Skills DevFlow subscription.", 14, 150);
+    doc.text(invoice.status === "paid" ? "Electronically generated subscription receipt. Payment was verified by the payment gateway." : "DEMO RECEIPT ONLY. No real payment was taken; this document is not a tax invoice.", 14, 150);
     doc.text("For billing support or queries, contact support@devflow.org or training@elevanceskills.com", 14, 156);
 
     doc.save(`DevFlow_Invoice_${invoice.invoiceNumber}.pdf`);
