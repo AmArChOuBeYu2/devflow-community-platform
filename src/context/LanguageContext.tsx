@@ -78,7 +78,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setPendingLanguage(null);
     return {
       success: true,
-      message: `Language successfully verified and switched!`,
+      message: `Language successfully verified and switched in this demo. No real email or SMS was sent.`,
     };
   };
 

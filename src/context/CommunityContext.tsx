@@ -34,7 +34,7 @@ interface CommunityContextType {
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, users, updateProfile } = useAuth();
+  const { user, users, updateProfile, suspendUser } = useAuth();
   const { deductPoints, canEditCommunityPosts, canReportContent } = useReputation();
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -337,7 +337,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const adminReviewReport = (reportId: string, action: "resolve_delete" | "dismiss" | "suspend_user") => {
     const report = reports.find((r) => r.id === reportId);
-    if (!report) return;
+    if (!report || report.status !== "pending" || user?.role !== "admin") return;
 
     if (action === "resolve_delete") {
       // Remove post
@@ -345,9 +345,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Deduct 10 points for guideline violation
       deductPoints(10, `Post removed by admin due to reported guideline violation (#${report.reason})`, report.postId, report.postAuthorId);
     } else if (action === "suspend_user") {
-      // Deduct points and remove
+      // Remove the violating content, suspend the account, and apply the specified demo penalty.
       deletePost(report.postId);
-      deductPoints(50, `Account flagged for repeated guideline violations`, report.postId, report.postAuthorId);
+      suspendUser(report.postAuthorId);
+      deductPoints(50, `Account suspended for repeated guideline violations (report ${report.id})`, report.postId, report.postAuthorId);
     }
 
     const updatedReports = reports.map((r) =>

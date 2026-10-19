@@ -83,12 +83,13 @@ export const LanguageOtpModal: React.FC = () => {
                   : "Language Switch Requirement (Mobile OTP)"}
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                A 6-digit OTP has been dispatched to your registered{" "}
+                A 6-digit demo code was generated locally for the registered{" "}
                 <span className="font-semibold">
                   {otpChannel === "email" ? "Email Address" : "Mobile Phone Number"}
                 </span>
                 : <span className="font-mono underline">{otpTargetDestination}</span>
               </p>
+              <p className="mt-2 text-[11px] text-blue-800 dark:text-blue-300">Demo only: no real email or SMS is sent. Production delivery requires a verified email/SMS provider.</p>
             </div>
           </div>
         </div>

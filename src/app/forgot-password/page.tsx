@@ -28,6 +28,7 @@ export default function ForgotPasswordPage() {
   const [resetMethod, setResetMethod] = useState<"email" | "phone">("email");
   const [identifier, setIdentifier] = useState("sc62970@gmail.com");
   const [otpCode, setOtpCode] = useState("");
+  const [demoOtp, setDemoOtp] = useState("");
   const [generatedPass, setGeneratedPass] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -54,6 +55,8 @@ export default function ForgotPasswordPage() {
       setWarningMessage(res.message);
     } else {
       setSuccessMessage(res.message);
+      setDemoOtp(res.demoOtp || "");
+      setOtpCode("");
       setStep(2);
       // Auto generate a random password for user convenience
       const initialGen = generateSecurePassword(12);
@@ -101,7 +104,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const res = resetPasswordWithOtp(identifier, newPassword);
+    const res = resetPasswordWithOtp(identifier, otpCode, newPassword);
     if (!res.success) {
       setWarningMessage(res.message);
     } else {
@@ -222,6 +225,30 @@ export default function ForgotPasswordPage() {
           ) : (
             /* STEP 2: Password Generator & Reset */
             <form onSubmit={handleResetSubmit} className="space-y-5">
+              {demoOtp && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                  <p className="font-bold">Local demo verification code</p>
+                  <p className="mt-1">For this training demo, no real email or SMS was sent. Enter this code manually to continue:</p>
+                  <p className="mt-2 select-all text-center font-mono text-lg font-black tracking-[0.35em]">{demoOtp}</p>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                  Verification code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter the 6-digit code"
+                  required
+                  className="w-full px-3.5 py-2.5 text-center text-base font-mono tracking-[0.3em] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+
               {/* Password Generator Feature (Letters Only Requirement) */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 space-y-3">
                 <div className="flex items-center justify-between">
@@ -274,7 +301,8 @@ export default function ForgotPasswordPage() {
                     {t.auth.newPasswordLabel}
                   </label>
                   <input
-                    type="text"
+                    type="password"
+                    autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter or paste generated letters-only password"
@@ -290,7 +318,8 @@ export default function ForgotPasswordPage() {
                     {t.auth.confirmNewPassword}
                   </label>
                   <input
-                    type="text"
+                    type="password"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm matching password"

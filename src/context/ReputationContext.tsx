@@ -35,6 +35,7 @@ export const ReputationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addPoints = (points: number, reason: string, relatedEntityId?: string, targetUserId?: string) => {
     const targetId = targetUserId || user?.id;
     if (!targetId) return;
+    if (logs.some((entry) => entry.userId === targetId && entry.relatedEntityId === relatedEntityId && entry.reason === reason)) return;
 
     const newLog: ReputationLog = {
       id: "rep-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
@@ -66,6 +67,7 @@ export const ReputationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const deductPoints = (points: number, reason: string, relatedEntityId?: string, targetUserId?: string) => {
     const targetId = targetUserId || user?.id;
     if (!targetId) return;
+    if (logs.some((entry) => entry.userId === targetId && entry.relatedEntityId === relatedEntityId && entry.reason === reason)) return;
 
     const deduction = -Math.abs(points);
     const newLog: ReputationLog = {

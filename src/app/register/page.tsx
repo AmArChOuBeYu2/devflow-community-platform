@@ -9,17 +9,23 @@ import { UserPlus, Mail, Smartphone, Lock, User, ArrowRight } from "lucide-react
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const { t } = useLanguage();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    login(email, true);
+    setErrorMessage("");
+    const result = register(name, email, phone, password);
+    if (!result.success) {
+      setErrorMessage(result.message || "Could not create your account.");
+      return;
+    }
     router.push("/");
   };
 
@@ -37,6 +43,12 @@ export default function RegisterPage() {
             Join thousands of developers sharing knowledge and solving challenges.
           </p>
         </div>
+
+        {errorMessage && (
+          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            {errorMessage}
+          </div>
+        )}
 
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-xl space-y-5">
           <form onSubmit={handleRegister} className="space-y-4">
@@ -101,7 +113,9 @@ export default function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="At least 8 characters"
+                  minLength={8}
+                  autoComplete="new-password"
                   required
                   className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
                 />

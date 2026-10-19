@@ -31,6 +31,7 @@ export interface UserProfile {
   reputation: number;
   profileCompleted: boolean;
   role: "user" | "admin";
+  isSuspended?: boolean;
   createdAt: string;
   dailyQuestionsCount: { [dateKey: string]: number };
   dailyRepTransferCount: { [dateKey: string]: number };
@@ -185,7 +186,7 @@ export interface SubscriptionInvoice {
   userEmail: string;
   planTier: UserTier;
   amount: number; // in INR
-  status: "paid" | "failed";
+  status: "paid" | "failed" | "demo";
   paymentMethod: string;
   paymentId: string;
   billingDate: string;

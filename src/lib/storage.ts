@@ -14,6 +14,7 @@ import {
 
 const STORAGE_KEYS = {
   CURRENT_USER: "devflow_current_user",
+  LOGGED_OUT: "devflow_logged_out",
   ALL_USERS: "devflow_all_users",
   QUESTIONS: "devflow_questions",
   ANSWERS: "devflow_answers",
@@ -39,7 +40,7 @@ const SEED_USERS: UserProfile[] = [
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     title: "Full Stack Engineer & Community Contributor",
     bio: "Passionate web developer building modern applications with Next.js, React, and TypeScript. Intern at Elevance Skills.",
-    location: "Jaipur, Rajasthan, India",
+    location: "Sample location (demo data)",
     website: "https://github.com/AmArChOuBeYu2",
     github: "AmArChOuBeYu2",
     tier: "bronze",
@@ -392,7 +393,7 @@ const SEED_SESSIONS: UserSession[] = [
     browser: "Chrome 128.0 (Windows)",
     os: "Windows 11 x64",
     deviceType: "Desktop",
-    ip: "103.87.58.12",
+    ip: "Sample IP (demo data)",
     location: "Jaipur, Rajasthan, India",
     createdAt: "2026-10-19T06:30:00Z",
     lastActiveAt: "2026-10-19T11:50:00Z",
@@ -405,8 +406,8 @@ const SEED_SESSIONS: UserSession[] = [
     browser: "Safari Mobile 18.0 (iOS)",
     os: "iOS 18.1 (iPhone 15 Pro)",
     deviceType: "Mobile",
-    ip: "157.34.192.45",
-    location: "Bengaluru, Karnataka, India",
+    ip: "Sample IP (demo data)",
+    location: "Sample location (demo data)",
     createdAt: "2026-10-18T14:10:00Z",
     lastActiveAt: "2026-10-18T18:22:00Z",
     isCurrent: false,
@@ -418,8 +419,8 @@ const SEED_SESSIONS: UserSession[] = [
     browser: "Firefox 130.0 (macOS)",
     os: "macOS Sonoma",
     deviceType: "Desktop",
-    ip: "49.36.12.89",
-    location: "New Delhi, India",
+    ip: "Sample IP (demo data)",
+    location: "Sample location (demo data)",
     createdAt: "2026-10-14T09:00:00Z",
     lastActiveAt: "2026-10-15T11:45:00Z",
     isCurrent: false,
@@ -437,9 +438,9 @@ const SEED_INVOICES: SubscriptionInvoice[] = [
     userEmail: "sc62970@gmail.com",
     planTier: "bronze",
     amount: 99,
-    status: "paid",
-    paymentMethod: "Razorpay UPI (GooglePay)",
-    paymentId: "pay_Rzp19A440Xz9",
+    status: "demo",
+    paymentMethod: "Sample demo record (not charged)",
+    paymentId: "DEMO-NO-CHARGE",
     billingDate: "2026-10-01T10:00:00Z",
     renewalDate: "2026-11-01T10:00:00Z",
   },
@@ -581,11 +582,19 @@ export const Storage = {
     }
   },
 
-  getCurrentUser(): UserProfile {
+  getCurrentUser(): UserProfile | null {
+    if (this.get<boolean>(STORAGE_KEYS.LOGGED_OUT, false)) return null;
     return this.get<UserProfile>(STORAGE_KEYS.CURRENT_USER, SEED_USERS[0]);
   },
 
+  clearCurrentUser(): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.LOGGED_OUT, "true");
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  },
+
   setCurrentUser(user: UserProfile): void {
+    if (this.isBrowser()) localStorage.removeItem(STORAGE_KEYS.LOGGED_OUT);
     this.set(STORAGE_KEYS.CURRENT_USER, user);
     // Also sync to all users
     const allUsers = this.getAllUsers().map((u) => (u.id === user.id ? user : u));
