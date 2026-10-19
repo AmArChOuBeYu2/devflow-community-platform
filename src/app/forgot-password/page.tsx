@@ -28,6 +28,7 @@ export default function ForgotPasswordPage() {
   const [resetMethod, setResetMethod] = useState<"email" | "phone">("email");
   const [identifier, setIdentifier] = useState("sc62970@gmail.com");
   const [otpCode, setOtpCode] = useState("");
+  const [demoOtp, setDemoOtp] = useState("");
   const [generatedPass, setGeneratedPass] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -54,7 +55,8 @@ export default function ForgotPasswordPage() {
       setWarningMessage(res.message);
     } else {
       setSuccessMessage(res.message);
-      setOtpCode(res.demoOtp || "");
+      setDemoOtp(res.demoOtp || "");
+      setOtpCode("");
       setStep(2);
       // Auto generate a random password for user convenience
       const initialGen = generateSecurePassword(12);
@@ -223,6 +225,13 @@ export default function ForgotPasswordPage() {
           ) : (
             /* STEP 2: Password Generator & Reset */
             <form onSubmit={handleResetSubmit} className="space-y-5">
+              {demoOtp && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                  <p className="font-bold">Local demo verification code</p>
+                  <p className="mt-1">For this training demo, no real email or SMS was sent. Enter this code manually to continue:</p>
+                  <p className="mt-2 select-all text-center font-mono text-lg font-black tracking-[0.35em]">{demoOtp}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                   Verification code
