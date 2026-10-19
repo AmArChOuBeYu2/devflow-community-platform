@@ -10,6 +10,7 @@ interface AuthContextType {
   sessions: UserSession[];
   securityLogs: SecurityAuditLog[];
   login: (emailOrPhone: string, rememberDevice?: boolean, password?: string) => { success: boolean; requiresOtp?: boolean; message?: string };
+  register: (name: string, email: string, phone: string, password: string) => { success: boolean; message?: string };
   logout: () => void;
   switchUser: (userId: string) => void;
   updateProfile: (updated: Partial<UserProfile>) => void;
@@ -74,6 +75,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessions(Storage.getSessions());
     setSecurityLogs(Storage.getSecurityLogs());
   }, []);
+
+  const register = (name: string, email: string, phone: string, password: string) => {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
+    if (!cleanName || !cleanEmail || !cleanPhone || password.length < 8) {
+      return { success: false, message: "Enter your name, email, phone number, and a password of at least 8 characters." };
+    }
+    const allUsers = Storage.getAllUsers();
+    const emailExists = allUsers.some((candidate) => candidate.email.toLowerCase() === cleanEmail);
+    const phoneKey = cleanPhone.replace(/\\s+/g, "");
+    const phoneExists = allUsers.some((candidate) => candidate.phone.replace(/\\s+/g, "") === phoneKey);
+    if (emailExists || phoneExists) {
+      return { success: false, message: emailExists ? "An account already uses this email address." : "An account already uses this phone number." };
+    }
+
+    const created: UserProfile = {
+      id: "user-" + (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Date.now().toString(36)),
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=" + encodeURIComponent(cleanName),
+      title: "Developer",
+      bio: "",
+      location: "",
+      tier: "free",
+      reputation: 1,
+      profileCompleted: false,
+      role: "user",
+      createdAt: new Date().toISOString(),
+      dailyQuestionsCount: {},
+      dailyRepTransferCount: {},
+      following: [],
+      bookmarks: [],
+      trustedDevices: [],
+      sessionExpiryMinutes: 60,
+    };
+    const updatedUsers = [...allUsers, created];
+    Storage.set("devflow_all_users", updatedUsers);
+    const passwords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
+    passwords[created.id] = password;
+    Storage.set("devflow_demo_passwords", passwords);
+    setUsers(updatedUsers);
+
+    const device = detectDevice();
+    const session: UserSession = {
+      id: "session-" + Date.now(),
+      userId: created.id,
+      browser: device.browser,
+      os: device.os,
+      deviceType: device.deviceType,
+      ip: device.ip,
+      location: device.location,
+      createdAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      isCurrent: true,
+      isTrusted: false,
+    };
+    const updatedSessions = [session, ...sessions.map((item) => ({ ...item, isCurrent: false }))];
+    setSessions(updatedSessions);
+    Storage.saveSessions(updatedSessions);
+    setUser(created);
+    Storage.setCurrentUser(created);
+
+    const audit: SecurityAuditLog = {
+      id: "sec-" + Date.now(),
+      userId: created.id,
+      userName: created.name,
+      action: "login_success",
+      ...device,
+      timestamp: new Date().toISOString(),
+      details: "New demo account registered and signed in.",
+    };
+    const updatedAudit = [audit, ...securityLogs];
+    setSecurityLogs(updatedAudit);
+    Storage.saveSecurityLogs(updatedAudit);
+    return { success: true };
+  };
 
   const switchUser = (userId: string) => {
     const found = users.find((u) => u.id === userId);
@@ -323,6 +402,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessions,
         securityLogs,
         login,
+        register,
         logout,
         switchUser,
         updateProfile,
