@@ -37,7 +37,7 @@ function LoginContent() {
     e.preventDefault();
     setErrorMsg("");
 
-    const res = login(emailOrPhone, rememberDevice);
+    const res = login(emailOrPhone, rememberDevice, password);
     if (res.success) {
       router.push("/");
     } else {
