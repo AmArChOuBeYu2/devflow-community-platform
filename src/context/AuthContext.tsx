@@ -11,6 +11,7 @@ interface AuthContextType {
   securityLogs: SecurityAuditLog[];
   login: (emailOrPhone: string, rememberDevice?: boolean, password?: string) => { success: boolean; requiresOtp?: boolean; message?: string };
   register: (name: string, email: string, phone: string, password: string) => { success: boolean; message?: string };
+  suspendUser: (userId: string) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
   updateProfile: (updated: Partial<UserProfile>) => void;
@@ -31,8 +32,8 @@ function detectDevice() {
       browser: "Chrome",
       os: "Windows 11",
       deviceType: "Desktop" as const,
-      ip: "103.87.58.12",
-      location: "Jaipur, Rajasthan, India",
+      ip: "Unavailable in browser-only demo",
+      location: "Unavailable in browser-only demo",
     };
   }
 
@@ -56,8 +57,8 @@ function detectDevice() {
     browser: `${browser} (Latest)`,
     os,
     deviceType,
-    ip: "103.87.58.12",
-    location: "Jaipur, Rajasthan, India",
+    ip: "Unavailable in browser-only demo",
+    location: "Unavailable in browser-only demo",
   };
 }
 
@@ -154,6 +155,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
+  const suspendUser = (userId: string) => {
+    const updatedUsers = Storage.getAllUsers().map((candidate) =>
+      candidate.id === userId ? { ...candidate, isSuspended: true } : candidate
+    );
+    Storage.set("devflow_all_users", updatedUsers);
+    setUsers(updatedUsers);
+    const remainingSessions = Storage.getSessions().filter((session) => session.userId !== userId);
+    setSessions(remainingSessions);
+    Storage.saveSessions(remainingSessions);
+  };
+
   const switchUser = (userId: string) => {
     const found = users.find((u) => u.id === userId);
     if (found) {
@@ -200,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         u.phone.replace(/\s+/g, "") === emailOrPhone.replace(/\s+/g, "")
     );
     if (!matched) return { success: false, message: "No account matches that email address or phone number." };
+    if (matched.isSuspended) return { success: false, message: "This account has been suspended for community guideline violations." };
 
     // Demo accounts use the documented password unless the account has been reset in this browser.
     // This is a client-side training demo, not production authentication.
@@ -251,10 +264,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     if (user) {
-      const updated = sessions.filter((s) => !s.isCurrent);
+      const updated = sessions.filter((s) => !(s.userId === user.id && s.isCurrent));
       setSessions(updated);
       Storage.saveSessions(updated);
     }
+    setUser(null);
+    Storage.clearCurrentUser();
   };
 
   const revokeSession = (sessionId: string) => {
@@ -403,6 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         securityLogs,
         login,
         register,
+        suspendUser,
         logout,
         switchUser,
         updateProfile,
