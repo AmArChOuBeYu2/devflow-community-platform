@@ -181,17 +181,17 @@ export default function PricingPage() {
             <div>
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
-                <span>Payment History & Downloadable Tax Invoices</span>
+                <span>Payment History & Subscription Receipts</span>
               </h3>
               <p className="text-xs text-gray-500">
-                Official GST-compliant tax invoices automatically generated upon every successful Razorpay payment.
+                Verified Razorpay payments are marked PAID. Demo receipts are clearly marked DEMO and do not represent a real charge.
               </p>
             </div>
           </div>
 
           {invoices.length === 0 ? (
             <p className="text-xs text-gray-400 py-4 text-center">
-              No invoice records yet. Upgrade to Bronze, Silver, or Gold to generate an official tax invoice!
+              No receipts yet. A verified gateway payment creates a receipt; demo checkout creates a no-charge demo receipt.
             </p>
           ) : (
             <div className="overflow-x-auto">
