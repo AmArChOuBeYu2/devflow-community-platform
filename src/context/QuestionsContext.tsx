@@ -97,7 +97,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Downvote penalty: -2 points for every downvote received
       if (direction === -1 && currentVote !== -1) {
-        deductPoints(2, `Downvote received on question "${q.title.slice(0, 30)}..."`, q.id, q.authorId);
+        deductPoints(2, `Downvote received on question "${q.title.slice(0, 30)}..." by voter ${user.id}`, q.id, q.authorId);
       }
 
       return {
@@ -171,7 +171,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     Storage.saveQuestions(updatedQuestions);
 
     // Task 4 rule: 5 reputation points for posting an answer
-    addPoints(5, "Posted an answer to question", questionId, user.id);
+    addPoints(5, "Posted an answer to question", newAns.id, user.id);
 
     return { success: true, message: "Answer posted successfully! Earned +5 reputation points." };
   };
@@ -233,7 +233,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Task 4 rule: 2 points decrease for every downvote received
       if (direction === -1 && currentVote !== -1) {
-        deductPoints(2, "Downvote received on answer", a.id, a.authorId);
+        deductPoints(2, `Downvote received on answer by voter ${user.id}`, a.id, a.authorId);
       }
 
       return {
