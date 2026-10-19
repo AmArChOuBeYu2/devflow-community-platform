@@ -9,16 +9,16 @@ interface AuthContextType {
   users: UserProfile[];
   sessions: UserSession[];
   securityLogs: SecurityAuditLog[];
-  login: (emailOrPhone: string, rememberDevice?: boolean) => { success: boolean; requiresOtp?: boolean; message?: string };
+  login: (emailOrPhone: string, rememberDevice?: boolean, password?: string) => { success: boolean; requiresOtp?: boolean; message?: string };
   logout: () => void;
   switchUser: (userId: string) => void;
   updateProfile: (updated: Partial<UserProfile>) => void;
   completeProfileBonus: () => boolean;
   revokeSession: (sessionId: string) => void;
   revokeAllOtherSessions: () => void;
-  requestForgotPassword: (identifier: string, isEmail: boolean) => { success: boolean; message: string };
+  requestForgotPassword: (identifier: string, isEmail: boolean) => { success: boolean; message: string; demoOtp?: string };
   generateSecurePassword: (length?: number) => string;
-  resetPasswordWithOtp: (identifier: string, newPass: string) => { success: boolean; message: string };
+  resetPasswordWithOtp: (identifier: string, otp: string, newPass: string) => { success: boolean; message: string };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,12 +113,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  const login = (emailOrPhone: string, rememberDevice = true) => {
+  const login = (emailOrPhone: string, rememberDevice = true, password = "password") => {
+    const normalized = emailOrPhone.trim().toLowerCase();
     const matched = users.find(
       (u) =>
-        u.email.toLowerCase() === emailOrPhone.toLowerCase() ||
+        u.email.toLowerCase() === normalized ||
         u.phone.replace(/\s+/g, "") === emailOrPhone.replace(/\s+/g, "")
-    ) || users[0]; // fallback to default user for easy mentor evaluation
+    );
+    if (!matched) return { success: false, message: "No account matches that email address or phone number." };
+
+    // Demo accounts use the documented password unless the account has been reset in this browser.
+    // This is a client-side training demo, not production authentication.
+    const savedPasswords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
+    if (!password || password !== (savedPasswords[matched.id] || "password")) {
+      return { success: false, message: "Incorrect password. Demo accounts use the password \"password\" unless you reset it in this browser." };
+    }
 
     const device = detectDevice();
     const sessionId = "session-" + Date.now();
@@ -197,9 +206,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task 2: Forgot Password with 1 request per day restriction
-  const requestForgotPassword = (identifier: string, isEmail: boolean): { success: boolean; message: string } => {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    const lastRequested = Storage.get<string | null>("devflow_forgot_pass_last_date_" + identifier, null);
+  const requestForgotPassword = (identifier: string, isEmail: boolean): { success: boolean; message: string; demoOtp?: string } => {
+    const normalized = identifier.trim().toLowerCase();
+    const matched = users.find((u) =>
+      isEmail
+        ? u.email.toLowerCase() === normalized
+        : u.phone.replace(/\s+/g, "") === identifier.replace(/\s+/g, "")
+    );
+    if (!matched) return { success: false, message: "No account matches that registered email address or phone number." };
+    const today = new Date().toLocaleDateString("en-CA");
+    const lastRequested = Storage.get<string | null>("devflow_forgot_pass_last_date_" + normalized, null);
 
     if (lastRequested === today) {
       return {
@@ -208,13 +224,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    Storage.set("devflow_forgot_pass_last_date_" + identifier, today);
+    Storage.set("devflow_forgot_pass_last_date_" + normalized, today);
+    const otp = String(100000 + Math.floor(Math.random() * 900000));
+    Storage.set("devflow_password_reset_otp_" + normalized, {
+      otp,
+      date: today,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      userId: matched.id,
+    });
 
     // Audit log
     const audit: SecurityAuditLog = {
       id: "sec-" + Date.now(),
-      userId: user?.id || "guest",
-      userName: identifier,
+      userId: matched.id,
+      userName: matched.name,
       action: "otp_requested",
       ...detectDevice(),
       timestamp: new Date().toISOString(),
@@ -226,7 +249,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: true,
-      message: `Reset OTP sent successfully to registered ${isEmail ? "email" : "mobile number"}: ${identifier}`,
+      message: `Demo verification code generated for the registered ${isEmail ? "email" : "mobile number"}. No email/SMS provider is configured, so this is a local demo flow, not a real message. The code expires in 10 minutes.`,
+      demoOtp: otp,
     };
   };
 
@@ -252,7 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .join("");
   };
 
-  const resetPasswordWithOtp = (identifier: string, newPass: string): { success: boolean; message: string } => {
+  const resetPasswordWithOtp = (identifier: string, otp: string, newPass: string): { success: boolean; message: string } => {
     // Validate only uppercase and lowercase letters
     const lettersOnlyRegex = /^[A-Za-z]+$/;
     if (!lettersOnlyRegex.test(newPass)) {
@@ -262,9 +286,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
+    const normalized = identifier.trim().toLowerCase();
+    const reset = Storage.get<{ otp: string; date: string; expiresAt: number; userId: string } | null>("devflow_password_reset_otp_" + normalized, null);
+    if (!reset || reset.otp !== otp.trim() || reset.expiresAt < Date.now() || reset.date !== new Date().toLocaleDateString("en-CA")) {
+      return { success: false, message: "Invalid or expired verification code. Request a new code when the daily limit permits." };
+    }
+    const savedPasswords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
+    savedPasswords[reset.userId] = newPass;
+    Storage.set("devflow_demo_passwords", savedPasswords);
+    Storage.set("devflow_password_reset_otp_" + normalized, null);
+
     const audit: SecurityAuditLog = {
       id: "sec-" + Date.now(),
-      userId: user?.id || "guest",
+      userId: reset.userId,
       userName: identifier,
       action: "password_reset",
       ...detectDevice(),
