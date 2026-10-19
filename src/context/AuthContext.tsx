@@ -301,11 +301,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Task 2: Forgot Password with 1 request per day restriction
   const requestForgotPassword = (identifier: string, isEmail: boolean): { success: boolean; message: string; demoOtp?: string } => {
-    const normalized = identifier.trim().toLowerCase();
+    const normalized = identifier.trim().toLowerCase().replace(/\s+/g, "");
     const matched = users.find((u) =>
       isEmail
         ? u.email.toLowerCase() === normalized
-        : u.phone.replace(/\s+/g, "") === identifier.replace(/\s+/g, "")
+        : u.phone.replace(/\s+/g, "") === normalized
     );
     if (!matched) return { success: false, message: "No account matches that registered email address or phone number." };
     const today = new Date().toLocaleDateString("en-CA");
@@ -353,21 +353,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lower = "abcdefghijklmnopqrstuvwxyz";
     const all = upper + lower;
+    const safeLength = Math.max(2, Math.min(64, Math.floor(length) || 12));
+    const randomIndex = (max: number) => {
+      if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+        const value = new Uint32Array(1);
+        const cutoff = Math.floor(0x100000000 / max) * max;
+        do {
+          crypto.getRandomValues(value);
+        } while (value[0] >= cutoff);
+        return value[0] % max;
+      }
+      return Math.floor(Math.random() * max);
+    };
 
-    let pass = "";
-    // Ensure at least one upper and one lower
-    pass += upper[Math.floor(Math.random() * upper.length)];
-    pass += lower[Math.floor(Math.random() * lower.length)];
-
-    for (let i = 2; i < length; i++) {
-      pass += all[Math.floor(Math.random() * all.length)];
+    const chars = [
+      upper[randomIndex(upper.length)],
+      lower[randomIndex(lower.length)],
+    ];
+    while (chars.length < safeLength) chars.push(all[randomIndex(all.length)]);
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = randomIndex(i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
     }
-
-    // Shuffle characters
-    return pass
-      .split("")
-      .sort(() => 0.5 - Math.random())
-      .join("");
+    return chars.join("");
   };
 
   const resetPasswordWithOtp = (identifier: string, otp: string, newPass: string): { success: boolean; message: string } => {
@@ -380,7 +388,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    const normalized = identifier.trim().toLowerCase();
+    const normalized = identifier.trim().toLowerCase().replace(/\s+/g, "");
     const reset = Storage.get<{ otp: string; date: string; expiresAt: number; userId: string } | null>("devflow_password_reset_otp_" + normalized, null);
     if (!reset || reset.otp !== otp.trim() || reset.expiresAt < Date.now() || reset.date !== new Date().toLocaleDateString("en-CA")) {
       return { success: false, message: "Invalid or expired verification code. Request a new code when the daily limit permits." };
