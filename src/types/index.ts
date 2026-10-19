@@ -31,6 +31,7 @@ export interface UserProfile {
   reputation: number;
   profileCompleted: boolean;
   role: "user" | "admin";
+  isSuspended?: boolean;
   createdAt: string;
   dailyQuestionsCount: { [dateKey: string]: number };
   dailyRepTransferCount: { [dateKey: string]: number };
