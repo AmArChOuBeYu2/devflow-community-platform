@@ -182,8 +182,8 @@ const SEED_QUESTIONS: Question[] = [
     authorTier: "free",
     authorReputation: 40,
     createdAt: "2026-10-17T14:30:00Z",
-    votes: 8,
-    votedUserIds: { "user-sarah": 1, "user-amar": 1 },
+    votes: 7,
+    votedUserIds: { "user-sarah": 1 },
     answersCount: 1,
     views: 189,
     awardedMilestones: [],
@@ -199,12 +199,29 @@ const SEED_QUESTIONS: Question[] = [
     authorTier: "silver",
     authorReputation: 630,
     createdAt: "2026-10-15T09:20:00Z",
-    votes: 21,
-    votedUserIds: { "user-amar": 1, "user-sarah": 1, "user-priya": 1 },
+    votes: 20,
+    votedUserIds: { "user-sarah": 1, "user-priya": 1 },
     answersCount: 1,
     views: 512,
     acceptedAnswerId: "ans-3",
     awardedMilestones: ["10_votes"],
+  },
+  {
+    id: "q-4",
+    title: "Best practices for optimistic UI updates with React 19 useActionState?",
+    body: "When using React 19's `useActionState` and `useOptimistic` in Next.js 15 App Router, what is the recommended pattern to handle network errors and rollback UI state cleanly without flickering? Any working code examples for developer community feeds?",
+    tags: ["react", "nextjs", "optimistic-ui", "typescript"],
+    authorId: "user-sarah",
+    authorName: "Sarah Chen",
+    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    authorTier: "gold",
+    authorReputation: 1480,
+    createdAt: "2026-10-19T08:00:00Z",
+    votes: 0,
+    votedUserIds: {},
+    answersCount: 0,
+    views: 45,
+    awardedMilestones: [],
   },
 ];
 
@@ -531,6 +548,15 @@ export const Storage = {
     }
   },
 
+  remove(key: string): void {
+    if (!this.isBrowser()) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.error("Storage remove error:", e);
+    }
+  },
+
   init(): void {
     if (!this.isBrowser()) return;
 
@@ -572,6 +598,35 @@ export const Storage = {
 
     if (!localStorage.getItem(STORAGE_KEYS.QUESTIONS)) {
       this.set(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+    } else {
+      // Clean up stale pre-seeded user-amar votes from q-2 and q-3 and ensure q-4 is present
+      const existingQ = this.get<Question[]>(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
+      let qChanged = false;
+      let migratedQ = existingQ.map((q) => {
+        if ((q.id === "q-2" || q.id === "q-3") && q.votedUserIds && q.votedUserIds["user-amar"]) {
+          const newVoted = { ...q.votedUserIds };
+          delete newVoted["user-amar"];
+          qChanged = true;
+          return {
+            ...q,
+            votes: Math.max(0, q.votes - 1),
+            votedUserIds: newVoted,
+          };
+        }
+        return q;
+      });
+
+      if (!migratedQ.some((q) => q.id === "q-4")) {
+        const q4 = SEED_QUESTIONS.find((q) => q.id === "q-4");
+        if (q4) {
+          migratedQ = [...migratedQ, q4];
+          qChanged = true;
+        }
+      }
+
+      if (qChanged) {
+        this.set(STORAGE_KEYS.QUESTIONS, migratedQ);
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.ANSWERS)) {
       this.set(STORAGE_KEYS.ANSWERS, SEED_ANSWERS);
@@ -730,6 +785,12 @@ export const Storage = {
 
   saveSecurityLogs(logs: SecurityAuditLog[]): void {
     this.set(STORAGE_KEYS.SECURITY_LOGS, logs);
+  },
+
+  resetDemoData(): void {
+    if (!this.isBrowser()) return;
+    localStorage.clear();
+    this.init();
   },
 };
 

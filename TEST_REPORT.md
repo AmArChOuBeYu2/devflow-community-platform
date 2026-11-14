@@ -119,7 +119,7 @@ All 22 routes compiled cleanly with zero TypeScript or linting errors.
 ## 4. Evaluator Verification Walkthrough & Methodology Distinction
 
 > **Testing Scope & Verification Types:**
-> - **Automated Logic Checks:** 18 self-contained unit and boundary logic tests in `scripts/verify-requirements.mjs`.
+> - **Automated Logic Checks:** 23 self-contained unit and boundary logic tests in `scripts/verify-requirements.mjs`.
 > - **Code & Architecture Inspection:** Verified models, Route Handlers, TypeScript types, and permission guards. Features not manually clicked in an active browser session are explicitly noted in `PROJECT_AUDIT.md`.
 > - **Manual Browser Verification:** Manually verified in a web browser for the Top Questions feed and responsive layout (`/`), Razorpay sandbox checkout and demo PDF receipt download (`/pricing`), and active device sessions (`/profile/security`).
 

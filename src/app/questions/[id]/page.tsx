@@ -8,6 +8,7 @@ import { useQuestions } from "@/context/QuestionsContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useReputation } from "@/context/ReputationContext";
+import { shareContent } from "@/lib/share";
 import {
   ChevronUp,
   ChevronDown,
@@ -67,7 +68,8 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const isQuestionAuthor = user?.id === question.authorId;
+  const isQuestionAuthor = Boolean(user && user.id === question.authorId);
+  const canAcceptAnswer = Boolean(user && (user.id === question.authorId || user.role === "admin"));
   const userVote = user ? question.votedUserIds[user.id] || 0 : 0;
 
   const handlePostAnswer = (e: React.FormEvent) => {
@@ -79,15 +81,21 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
-    if (answerBody.trim().length < 20) {
+    if (user.isSuspended) {
+      setFeedbackMsg("Your account has been suspended by an administrator.");
+      return;
+    }
+
+    const trimmed = answerBody.trim();
+    if (trimmed.length < 20) {
       setFeedbackMsg("Please write a meaningful answer of at least 20 characters.");
       return;
     }
 
-    const res = addAnswer(questionId, answerBody.trim());
+    const res = addAnswer(questionId, trimmed);
     if (res.success) {
       setAnswerBody("");
-      setFeedbackMsg("Answer posted successfully! Earned +5 reputation points.");
+      setFeedbackMsg(res.message);
     } else {
       setFeedbackMsg(res.message);
     }
@@ -100,6 +108,14 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleVoteQuestion = (dir: 1 | -1) => {
+    if (!user) {
+      setFeedbackMsg("Please sign in to vote on questions.");
+      return;
+    }
+    if (isQuestionAuthor) {
+      setFeedbackMsg("You cannot vote on your own question.");
+      return;
+    }
     const res = voteQuestion(question.id, dir);
     if (res?.message) {
       setFeedbackMsg(res.message);
@@ -107,6 +123,15 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleVoteAnswer = (ansId: string, dir: 1 | -1) => {
+    if (!user) {
+      setFeedbackMsg("Please sign in to vote on answers.");
+      return;
+    }
+    const target = answers.find((a) => a.id === ansId);
+    if (target && target.authorId === user.id) {
+      setFeedbackMsg("You cannot vote on your own answer.");
+      return;
+    }
     const res = voteAnswer(ansId, dir);
     if (res?.message) {
       setFeedbackMsg(res.message);
@@ -114,8 +139,25 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleMarkAccepted = (ansId: string) => {
+    if (!user) {
+      setFeedbackMsg("Please sign in to accept an answer.");
+      return;
+    }
     const res = markAnswerAccepted(question.id, ansId);
     if (res?.message) {
+      setFeedbackMsg(res.message);
+    }
+  };
+
+  const handleShare = async () => {
+    const res = await shareContent({
+      title: question.title,
+      text: question.body.slice(0, 120),
+      url: typeof window !== "undefined" ? window.location.href : "",
+    });
+    if (res.success) {
+      setFeedbackMsg(res.message);
+    } else if (res.method !== "cancelled") {
       setFeedbackMsg(res.message);
     }
   };
@@ -222,11 +264,10 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
               <div className="flex items-center space-x-3 text-gray-500">
                 <button
-                  onClick={() => {
-                    navigator.clipboard?.writeText(window.location.href);
-                    setFeedbackMsg("Question link copied to clipboard!");
-                  }}
-                  className="hover:text-primary flex items-center gap-1 font-medium"
+                  type="button"
+                  onClick={handleShare}
+                  className="hover:text-primary flex items-center gap-1 font-medium transition"
+                  title="Share this question"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Share</span>
@@ -333,12 +374,36 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                       : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
                   }`}
                 >
-                  {isAccepted && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-green-700 dark:text-green-300 mb-3 bg-green-100 dark:bg-green-950/50 px-3 py-1 rounded-full w-fit">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span>Accepted Solution (Author earned +10 Reputation)</span>
+                  {/* Accepted Answer Banner (With Visible Controls) */}
+                  {isAccepted ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-green-100 dark:bg-green-950/50 px-3.5 py-1.5 rounded-xl border border-green-300 dark:border-green-800">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-green-800 dark:text-green-200">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                        <span>Accepted Solution {ans.authorId !== question.authorId && "(Author awarded +10 Reputation)"}</span>
+                      </div>
+                      {canAcceptAnswer && (
+                        <button
+                          type="button"
+                          onClick={() => handleMarkAccepted(ans.id)}
+                          className="text-[11px] font-bold text-green-800 dark:text-green-300 hover:underline px-2.5 py-0.5 rounded-lg bg-white/80 dark:bg-gray-900/80 border border-green-300 dark:border-green-700 transition"
+                        >
+                          Unaccept Answer
+                        </button>
+                      )}
                     </div>
-                  )}
+                  ) : canAcceptAnswer ? (
+                    <div className="flex justify-end mb-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMarkAccepted(ans.id)}
+                        className="px-3 py-1 rounded-xl text-xs font-bold border border-green-600/70 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 transition flex items-center gap-1.5 shadow-2xs"
+                        title="Mark as accepted answer (Awards +10 reputation to author)"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Accept Answer</span>
+                      </button>
+                    </div>
+                  ) : null}
 
                   <div className="flex items-start gap-4">
                     {/* Vote & Accept Controls */}
@@ -369,25 +434,27 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                         <ChevronDown className="w-4 h-4" />
                       </button>
 
-                      {/* Accept Button (Only Question Author can mark) */}
-                      {isQuestionAuthor && (
+                      {/* Accept Button with Visible Label (Question Author or Admin) */}
+                      {canAcceptAnswer && (
                         <button
+                          type="button"
                           onClick={() => handleMarkAccepted(ans.id)}
-                          className={`mt-2 p-1.5 rounded-xl border transition ${
+                          className={`mt-2 px-2 py-1 rounded-xl text-[10px] font-bold transition flex items-center gap-1 ${
                             isAccepted
-                              ? "bg-green-600 text-white border-green-600 shadow-sm"
-                              : "border-gray-200 dark:border-gray-700 text-gray-400 hover:text-green-600 hover:border-green-400"
+                              ? "bg-green-600 text-white shadow-xs hover:bg-green-700"
+                              : "border border-green-600/40 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40"
                           }`}
-                          title="Mark as accepted answer (Awards +10 reputation to author)"
+                          title={isAccepted ? "Click to unaccept" : "Accept this solution"}
                         >
-                          <Check className="w-4 h-4" />
+                          <Check className="w-3 h-3" />
+                          <span>{isAccepted ? "Accepted" : "Accept"}</span>
                         </button>
                       )}
                     </div>
 
                     {/* Answer Content */}
                     <div className="flex-1 space-y-3 min-w-0">
-                      <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-sans">
+                      <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-sans break-words overflow-x-auto">
                         {ans.body}
                       </div>
 
@@ -438,35 +505,87 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
 
         {/* Post Answer Box (Task 4: Awards +5 reputation points) */}
         {!question.isClosed ? (
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
-            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center justify-between">
-              <span>{t.questions.yourAnswer}</span>
-              <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span>{t.questions.yourAnswer}</span>
+              </h3>
+              <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
                 +5 Reputation Reward
               </span>
-            </h3>
+            </div>
 
-            <form onSubmit={handlePostAnswer} className="space-y-3">
-              <textarea
-                rows={6}
-                value={answerBody}
-                onChange={(e) => setAnswerBody(e.target.value)}
-                placeholder="Write your constructive answer or code snippet to resolve this question..."
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
-              />
-
-              <div className="flex items-center justify-between">
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition"
-                >
-                  {t.questions.postAnswer}
-                </button>
-                <span className="text-[11px] text-gray-400">
-                  Earn +10 extra points if marked as accepted answer!
-                </span>
+            {!user ? (
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs space-y-3">
+                <p className="font-semibold text-amber-900 dark:text-amber-200">
+                  Please log in to submit an answer and earn reputation points.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="px-3.5 py-1.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition text-xs"
+                  >
+                    Sign In with Demo Account
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-3.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 transition text-xs"
+                  >
+                    Register
+                  </Link>
+                </div>
               </div>
-            </form>
+            ) : user.isSuspended ? (
+              <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 font-semibold">
+                Your account has been suspended by an administrator for repeated guideline violations. You cannot post answers.
+              </div>
+            ) : (
+              <form onSubmit={handlePostAnswer} className="space-y-3">
+                <textarea
+                  rows={6}
+                  value={answerBody}
+                  onChange={(e) => setAnswerBody(e.target.value)}
+                  placeholder="Write your constructive answer or code snippet to resolve this question (minimum 20 characters required)..."
+                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-semibold flex items-center gap-1 ${
+                        answerBody.trim().length >= 20
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {answerBody.trim().length >= 20 ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      )}
+                      <span>{answerBody.trim().length} / 20 characters minimum</span>
+                    </span>
+                    <span className="text-[11px] text-gray-400 hidden sm:inline">
+                      (Minimum 20 characters required)
+                    </span>
+                  </div>
+
+                  <span className="text-[11px] text-gray-400">
+                    Earn +10 extra points if marked as accepted answer!
+                  </span>
+                </div>
+
+                <div className="pt-1">
+                  <button
+                    type="submit"
+                    disabled={answerBody.trim().length < 20}
+                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md transition"
+                  >
+                    {t.questions.postAnswer}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         ) : (
           <div className="p-4 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-2xl text-center text-xs">

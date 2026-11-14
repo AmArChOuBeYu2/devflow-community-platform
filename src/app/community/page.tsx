@@ -11,6 +11,7 @@ import { useReputation } from "@/context/ReputationContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { ReportModal } from "@/components/modals/ReportModal";
 import { CommunityPost } from "@/types";
+import { shareContent } from "@/lib/share";
 import {
   Sparkles,
   Heart,
@@ -155,9 +156,19 @@ export default function CommunityFeedPage() {
     showToast(res.message);
   };
 
-  const handleShareClick = (postId: string) => {
-    sharePost(postId);
-    showToast("Share link copied to clipboard!");
+  const handleShareClick = async (post: CommunityPost) => {
+    const url = typeof window !== "undefined" ? `${window.location.origin}/community#post-${post.id}` : "";
+    const res = await shareContent({
+      title: `DevFlow Post by ${post.authorName}`,
+      text: post.content.slice(0, 100),
+      url,
+    });
+    if (res.success) {
+      sharePost(post.id);
+      showToast(res.message);
+    } else if (res.method !== "cancelled") {
+      showToast(res.message);
+    }
   };
 
   // Filter & Feed logic
@@ -666,8 +677,9 @@ export default function CommunityFeedPage() {
 
                       {/* Share */}
                       <button
-                        onClick={() => handleShareClick(post.id)}
+                        onClick={() => handleShareClick(post)}
                         className="flex items-center gap-1.5 font-semibold hover:text-primary transition"
+                        title="Share this post"
                       >
                         <Share2 className="w-4 h-4" />
                         <span>{post.sharesCount}</span>

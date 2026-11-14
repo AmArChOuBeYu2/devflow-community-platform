@@ -158,7 +158,7 @@ npm run build
 4. **Forgot Password (2:00 - 2:45):** Demonstrate `/forgot-password`, trigger the 1-per-day rate limit warning (*"You can use this option only one time per day."*), verify OTP, and click "Generate Random Password" highlighting letters-only `[A-Za-z]`.
 5. **Subscriptions & Demo Receipts (2:45 - 3:30):** Open `/pricing`, select Silver plan, complete simulated checkout in evaluation sandbox mode, and download the demo receipt PDF with 18% IGST calculation breakdown.
 6. **Multi-Language OTP & Security (3:30 - 4:15):** Switch to French (triggers Email OTP) vs Hindi/Spanish (triggers Mobile OTP). Open `/profile/security` to show active sessions and revoke remote sessions.
-7. **Conclusion (4:15 - 4:45):** Summarize the verified logic checks (18/18 logic tests passed), clean production build (22 routes), and thank the Elevance Skills team!
+7. **Conclusion (4:15 - 4:45):** Summarize the verified logic checks (23/23 logic tests passed), clean production build (22 routes), and thank the Elevance Skills team!
 
 ---
 

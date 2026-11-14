@@ -140,9 +140,13 @@ export default function SecurityPage() {
                           Current Session
                         </span>
                       )}
-                      {s.isTrusted && (
+                      {s.isTrusted ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
                           Trusted Device
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          Unrecognized Device
                         </span>
                       )}
                     </div>

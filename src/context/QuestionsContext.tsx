@@ -29,8 +29,20 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { addPoints, deductPoints, canVoteToCloseQuestions } = useReputation();
   const { canAskQuestionToday, recordQuestionAsked } = useSubscription();
 
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [questions, setQuestions] = useState<Question[]>(() => {
+    if (typeof window !== "undefined") {
+      Storage.init();
+      return Storage.getQuestions();
+    }
+    return [];
+  });
+  const [answers, setAnswers] = useState<Answer[]>(() => {
+    if (typeof window !== "undefined") {
+      Storage.init();
+      return Storage.getAnswers();
+    }
+    return [];
+  });
 
   useEffect(() => {
     setQuestions(Storage.getQuestions());
@@ -72,7 +84,8 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       awardedMilestones: [],
     };
 
-    const updated = [newQ, ...questions];
+    const currentQuestions = Storage.getQuestions();
+    const updated = [newQ, ...currentQuestions];
     setQuestions(updated);
     Storage.saveQuestions(updated);
     recordQuestionAsked();
@@ -87,7 +100,8 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return { success: false, message: "Suspended accounts cannot vote." };
     }
 
-    const target = questions.find((q) => q.id === questionId);
+    const currentQuestions = Storage.getQuestions();
+    const target = currentQuestions.find((q) => q.id === questionId);
     if (!target) return { success: false, message: "Question not found." };
 
     // Prevent self-voting on questions
@@ -98,14 +112,27 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const currentVote: number = (target.votedUserIds[user.id] as number | undefined) ?? 0;
     let newScore = target.votes;
     const newVoted = { ...target.votedUserIds };
+    let feedback = "";
 
     if (currentVote === direction) {
       // Toggle off
       delete newVoted[user.id];
       newScore -= direction;
+      feedback = "Vote removed.";
+      if (direction === -1) {
+        addPoints(2, `Downvote removed on question "${target.title.slice(0, 30)}..."`, target.id, target.authorId);
+      }
     } else {
       newVoted[user.id] = direction;
       newScore += currentVote === 0 ? direction : direction * 2;
+      feedback = direction === 1 ? "Upvoted! (+1)" : "Downvoted (-1)";
+
+      if (currentVote === -1) {
+        addPoints(2, `Downvote removed on question "${target.title.slice(0, 30)}..."`, target.id, target.authorId);
+      }
+      if (direction === -1) {
+        deductPoints(2, `Downvote received on question "${target.title.slice(0, 30)}..."`, target.id, target.authorId);
+      }
     }
 
     const milestones = target.awardedMilestones || [];
@@ -118,12 +145,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       addPoints(2, `Question "${target.title.slice(0, 30)}..." received 10+ upvotes`, target.id, target.authorId);
     }
 
-    // Downvote penalty: -2 points for every downvote received
-    if (direction === -1 && currentVote !== -1) {
-      deductPoints(2, `Downvote received on question "${target.title.slice(0, 30)}..."`, target.id, target.authorId);
-    }
-
-    const updated = questions.map((q) => {
+    const updated = currentQuestions.map((q) => {
       if (q.id !== questionId) return q;
       return {
         ...q,
@@ -135,7 +157,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setQuestions(updated);
     Storage.saveQuestions(updated);
-    return { success: true };
+    return { success: true, message: feedback };
   };
 
   const voteToCloseQuestion = (questionId: string, reason: string): { success: boolean; message: string } => {
@@ -177,17 +199,23 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return { success: false, message: "Your account has been suspended by an administrator." };
     }
 
-    const targetQ = questions.find((q) => q.id === questionId);
+    const currentQuestions = Storage.getQuestions();
+    const targetQ = currentQuestions.find((q) => q.id === questionId);
     if (!targetQ) return { success: false, message: "Question not found." };
 
     if (targetQ.isClosed) {
       return { success: false, message: "This question has been closed and is no longer accepting answers." };
     }
 
+    const trimmed = body.trim();
+    if (trimmed.length < 20) {
+      return { success: false, message: "Answers must be at least 20 characters long to provide sufficient detail." };
+    }
+
     const newAns: Answer = {
       id: "ans-" + Date.now(),
       questionId,
-      body,
+      body: trimmed,
       authorId: user.id,
       authorName: user.name,
       authorAvatar: user.avatar,
@@ -200,14 +228,15 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       awardedMilestones: [],
     };
 
-    const updatedAnswers = [...answers, newAns];
+    const currentAnswers = Storage.getAnswers();
+    const updatedAnswers = [...currentAnswers, newAns];
     setAnswers(updatedAnswers);
     Storage.saveAnswers(updatedAnswers);
 
     // Update question answer count
-    const updatedQuestions = questions.map((q) => {
+    const updatedQuestions = currentQuestions.map((q) => {
       if (q.id === questionId) {
-        return { ...q, answersCount: q.answersCount + 1 };
+        return { ...q, answersCount: (q.answersCount || 0) + 1 };
       }
       return q;
     });
@@ -221,18 +250,48 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const markAnswerAccepted = (questionId: string, answerId: string): { success: boolean; message: string } => {
-    const q = questions.find((item) => item.id === questionId);
+    const currentQuestions = Storage.getQuestions();
+    const currentAnswers = Storage.getAnswers();
+    const q = currentQuestions.find((item) => item.id === questionId);
     if (!q || !user) return { success: false, message: "Question not found or unauthenticated." };
 
     if (q.authorId !== user.id && user.role !== "admin") {
-      return { success: false, message: "Only the author of the question can mark an answer as accepted." };
+      return { success: false, message: "Only the question author or an administrator can accept an answer." };
     }
 
-    const targetAnswer = answers.find((a) => a.id === answerId);
+    const targetAnswer = currentAnswers.find((a) => a.id === answerId);
     if (!targetAnswer) return { success: false, message: "Target answer not found." };
 
+    const isAlreadyAccepted = q.acceptedAnswerId === answerId;
     const targetAuthorId = targetAnswer.authorId;
     const isSelfAnswer = targetAuthorId === user.id;
+
+    if (isAlreadyAccepted) {
+      // Toggle off acceptance
+      const updatedAnswers = currentAnswers.map((a) => {
+        if (a.questionId === questionId) {
+          return { ...a, isAccepted: false };
+        }
+        return a;
+      });
+      const updatedQuestions = currentQuestions.map((item) => {
+        if (item.id === questionId) {
+          return { ...item, acceptedAnswerId: undefined };
+        }
+        return item;
+      });
+
+      setAnswers(updatedAnswers);
+      Storage.saveAnswers(updatedAnswers);
+      setQuestions(updatedQuestions);
+      Storage.saveQuestions(updatedQuestions);
+
+      return {
+        success: true,
+        message: "Accepted status removed from answer.",
+      };
+    }
+
     const milestones = targetAnswer.awardedMilestones || [];
     let newMilestones = [...milestones];
 
@@ -244,7 +303,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       addPoints(10, `Answer marked as accepted solution for question #${questionId}`, answerId, targetAuthorId);
     }
 
-    const updatedAnswers = answers.map((a) => {
+    const updatedAnswers = currentAnswers.map((a) => {
       if (a.questionId === questionId) {
         const isThis = a.id === answerId;
         return {
@@ -256,7 +315,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return a;
     });
 
-    const updatedQuestions = questions.map((item) => {
+    const updatedQuestions = currentQuestions.map((item) => {
       if (item.id === questionId) {
         return { ...item, acceptedAnswerId: answerId };
       }
@@ -283,7 +342,8 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return { success: false, message: "Suspended accounts cannot vote." };
     }
 
-    const target = answers.find((a) => a.id === answerId);
+    const currentAnswers = Storage.getAnswers();
+    const target = currentAnswers.find((a) => a.id === answerId);
     if (!target) return { success: false, message: "Answer not found." };
 
     // Prevent self-voting on answers
@@ -294,13 +354,26 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const currentVote: number = (target.votedUserIds[user.id] as number | undefined) ?? 0;
     let newScore = target.votes;
     const newVoted = { ...target.votedUserIds };
+    let feedback = "";
 
     if (currentVote === direction) {
       delete newVoted[user.id];
       newScore -= direction;
+      feedback = "Vote removed.";
+      if (direction === -1) {
+        addPoints(2, "Downvote removed on answer", target.id, target.authorId);
+      }
     } else {
       newVoted[user.id] = direction;
       newScore += currentVote === 0 ? direction : direction * 2;
+      feedback = direction === 1 ? "Upvoted! (+1)" : "Downvoted (-1)";
+
+      if (currentVote === -1) {
+        addPoints(2, "Downvote removed on answer", target.id, target.authorId);
+      }
+      if (direction === -1) {
+        deductPoints(2, "Downvote received on answer", target.id, target.authorId);
+      }
     }
 
     const milestones = target.awardedMilestones || [];
@@ -313,12 +386,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       addPoints(5, "Answer reached 5 upvotes milestone", target.id, target.authorId);
     }
 
-    // Task 4 rule: 2 points decrease for every downvote received
-    if (direction === -1 && currentVote !== -1) {
-      deductPoints(2, "Downvote received on answer", target.id, target.authorId);
-    }
-
-    const updated = answers.map((a) => {
+    const updated = currentAnswers.map((a) => {
       if (a.id !== answerId) return a;
       return {
         ...a,
@@ -330,7 +398,7 @@ export const QuestionsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setAnswers(updated);
     Storage.saveAnswers(updated);
-    return { success: true };
+    return { success: true, message: feedback };
   };
 
   const deleteAnswer = (answerId: string): { success: boolean; message: string } => {

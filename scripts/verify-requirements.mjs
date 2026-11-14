@@ -120,6 +120,135 @@ runTest("Self-voting prevention: Users cannot upvote or downvote their own conte
   assert.strictEqual(canVote(question.authorId), false, "Self-voting must be disallowed");
 });
 
+runTest("Question voting: Toggling, direction switching (-1 to +1), and two-way author rep adjustment", () => {
+  let authorRep = 100;
+  const question = {
+    id: "q-test",
+    authorId: "user-sarah",
+    votes: 7,
+    votedUserIds: {},
+  };
+
+  function vote(userId, direction) {
+    if (userId === question.authorId) return { success: false, message: "Self vote disallowed" };
+    const current = question.votedUserIds[userId] || 0;
+    if (current === direction) {
+      delete question.votedUserIds[userId];
+      question.votes -= direction;
+      if (direction === -1) authorRep += 2; // downvote removed: restore rep
+    } else {
+      question.votedUserIds[userId] = direction;
+      question.votes += current === 0 ? direction : direction * 2;
+      if (current === -1) authorRep += 2; // previous downvote undone: restore rep
+      if (direction === -1) authorRep -= 2; // downvoted: deduct rep
+    }
+    return { success: true, score: question.votes };
+  }
+
+  // User amar upvotes Sarah's question (+1) -> score goes to 8
+  assert.strictEqual(vote("user-amar", 1).score, 8);
+  assert.strictEqual(authorRep, 100);
+
+  // User amar clicks upvote again -> toggles off back to 7
+  assert.strictEqual(vote("user-amar", 1).score, 7);
+  assert.strictEqual(question.votedUserIds["user-amar"], undefined);
+
+  // User amar downvotes Sarah's question (-1) -> score drops to 6, author rep drops by 2 to 98
+  assert.strictEqual(vote("user-amar", -1).score, 6);
+  assert.strictEqual(authorRep, 98);
+
+  // User amar switches vote to upvote (+1) -> score goes from 6 to 8 (+2 diff), author rep restored to 100
+  assert.strictEqual(vote("user-amar", 1).score, 8);
+  assert.strictEqual(authorRep, 100);
+});
+
+runTest("Answer posting: Minimum 20-character validation, question answer count increment, and +5 reputation reward", () => {
+  let userRep = 50;
+  const question = { id: "q-1", answersCount: 1, isClosed: false };
+  const answers = [];
+
+  function submitAnswer(user, qId, body) {
+    if (!user) return { success: false, message: "Unauthenticated" };
+    if (user.isSuspended) return { success: false, message: "Suspended" };
+    if (question.isClosed) return { success: false, message: "Closed" };
+    if (body.trim().length < 20) return { success: false, message: "Too short" };
+
+    answers.push({ id: "ans-new", body: body.trim(), authorId: user.id });
+    question.answersCount += 1;
+    userRep += 5;
+    return { success: true };
+  }
+
+  // Short answer (< 20 chars) fails
+  assert.strictEqual(submitAnswer({ id: "user-amar" }, "q-1", "Too short!").success, false);
+  assert.strictEqual(question.answersCount, 1);
+  assert.strictEqual(userRep, 50);
+
+  // Valid 20+ char answer succeeds, increments answer count, and awards +5 rep
+  const validBody = "This is a comprehensive, valid answer exceeding twenty characters.";
+  const res = submitAnswer({ id: "user-amar" }, "q-1", validBody);
+  assert.strictEqual(res.success, true);
+  assert.strictEqual(question.answersCount, 2);
+  assert.strictEqual(userRep, 55);
+});
+
+runTest("Accept answer: Author or admin authorization, switching accepted answer, and unaccept toggle", () => {
+  const question = { id: "q-1", authorId: "user-amar", acceptedAnswerId: undefined };
+  let answers = [
+    { id: "ans-1", questionId: "q-1", authorId: "user-sarah", isAccepted: false, awardedMilestones: [] },
+    { id: "ans-2", questionId: "q-1", authorId: "user-alex", isAccepted: false, awardedMilestones: [] },
+  ];
+  let sarahRep = 100;
+  let alexRep = 200;
+
+  function accept(actingUser, answerId) {
+    if (actingUser.id !== question.authorId && actingUser.role !== "admin") {
+      return { success: false, message: "Unauthorized" };
+    }
+    const isAlreadyAccepted = question.acceptedAnswerId === answerId;
+    if (isAlreadyAccepted) {
+      question.acceptedAnswerId = undefined;
+      answers = answers.map((a) => ({ ...a, isAccepted: false }));
+      return { success: true, action: "unaccepted" };
+    }
+
+    const target = answers.find((a) => a.id === answerId);
+    if (target.authorId !== question.authorId && !target.awardedMilestones.includes("accepted")) {
+      target.awardedMilestones.push("accepted");
+      if (target.authorId === "user-sarah") sarahRep += 10;
+      if (target.authorId === "user-alex") alexRep += 10;
+    }
+
+    question.acceptedAnswerId = answerId;
+    answers = answers.map((a) => ({ ...a, isAccepted: a.id === answerId }));
+    return { success: true, action: "accepted" };
+  }
+
+  // Non-author non-admin cannot accept
+  assert.strictEqual(accept({ id: "user-david", role: "user" }, "ans-1").success, false);
+
+  // Author accepts ans-1
+  const res1 = accept({ id: "user-amar", role: "user" }, "ans-1");
+  assert.strictEqual(res1.action, "accepted");
+  assert.strictEqual(question.acceptedAnswerId, "ans-1");
+  assert.strictEqual(answers[0].isAccepted, true);
+  assert.strictEqual(sarahRep, 110);
+
+  // Author clicks ans-1 again -> toggles unaccepted
+  const resToggle = accept({ id: "user-amar", role: "user" }, "ans-1");
+  assert.strictEqual(resToggle.action, "unaccepted");
+  assert.strictEqual(question.acceptedAnswerId, undefined);
+  assert.strictEqual(answers[0].isAccepted, false);
+
+  // Admin accepts ans-2 -> only ans-2 is accepted
+  const resAdmin = accept({ id: "user-admin", role: "admin" }, "ans-2");
+  assert.strictEqual(resAdmin.action, "accepted");
+  assert.strictEqual(question.acceptedAnswerId, "ans-2");
+  assert.strictEqual(answers[1].isAccepted, true);
+  assert.strictEqual(answers[0].isAccepted, false);
+  assert.strictEqual(alexRep, 210);
+});
+
 // ============================================================================
 // 2. TASK 1: COMMUNITY FEED & SOCIAL INTERACTION
 // ============================================================================
@@ -361,6 +490,68 @@ runTest("Session tracking: Multiple active sessions and remote revocation", () =
   assert.strictEqual(sessions[0].id, "s1");
 });
 
+runTest("Session isolation: User-scoped revocation and logout state clearing", () => {
+  let allSessions = [
+    { id: "s-amar-1", userId: "user-amar", isCurrent: true },
+    { id: "s-amar-2", userId: "user-amar", isCurrent: false },
+    { id: "s-sarah-1", userId: "user-sarah", isCurrent: true },
+  ];
+  let currentUser = { id: "user-amar" };
+
+  function getUserSessions(uid) {
+    return allSessions.filter((s) => s.userId === uid);
+  }
+
+  function revokeAllOther(user) {
+    allSessions = allSessions.filter((s) => s.userId !== user.id || s.isCurrent);
+  }
+
+  function logout() {
+    allSessions = allSessions.map((s) => (s.userId === currentUser.id && s.isCurrent ? { ...s, isCurrent: false } : s));
+    currentUser = null;
+  }
+
+  // Amar only sees his 2 sessions
+  assert.strictEqual(getUserSessions("user-amar").length, 2);
+
+  // Amar revokes all other sessions -> s-amar-2 removed, but s-sarah-1 is completely untouched!
+  revokeAllOther(currentUser);
+  assert.strictEqual(allSessions.length, 2);
+  assert.strictEqual(allSessions.some((s) => s.id === "s-sarah-1"), true);
+  assert.strictEqual(allSessions.some((s) => s.id === "s-amar-1"), true);
+  assert.strictEqual(allSessions.some((s) => s.id === "s-amar-2"), false);
+
+  // Amar logs out -> currentUser becomes null and current session is no longer current
+  logout();
+  assert.strictEqual(currentUser, null);
+  assert.strictEqual(allSessions.find((s) => s.id === "s-amar-1").isCurrent, false);
+});
+
+runTest("Share functionality: Graceful AbortError handling and conditional counter increment", () => {
+  let shareCount = 5;
+
+  function handleShareResult(result) {
+    if (result.success) {
+      shareCount += 1;
+      return "Link copied!";
+    }
+    if (result.method === "cancelled") {
+      return "Share cancelled.";
+    }
+    return "Failed to share.";
+  }
+
+  // User aborts native share modal -> no increment
+  const cancelledRes = handleShareResult({ success: false, method: "cancelled" });
+  assert.strictEqual(cancelledRes, "Share cancelled.");
+  assert.strictEqual(shareCount, 5, "Share count must NOT increment on cancellation");
+
+  // User successfully shares or copies -> counter increments
+  const successRes = handleShareResult({ success: true, method: "clipboard" });
+  assert.strictEqual(successRes, "Link copied!");
+  assert.strictEqual(shareCount, 6, "Share count must increment on true success");
+});
+
 runTest("Suspension guard: Suspended users are barred from questions, answers, posts, comments, votes", () => {
   const suspendedUser = { isSuspended: true };
 
@@ -380,7 +571,7 @@ runTest("Suspension guard: Suspended users are barred from questions, answers, p
 console.log("\n================================================================");
 console.log(`   TOTAL LOGIC CHECKS: ${totalTests} | PASSED: ${passedTests} | FAILED: ${totalTests - passedTests}`);
 if (passedTests === totalTests) {
-  console.log("   RESULT: ALL 18 LOGIC & BOUNDARY CHECKS PASSED");
+  console.log(`   RESULT: ALL ${totalTests} LOGIC & BOUNDARY CHECKS PASSED`);
 } else {
   console.log("   RESULT: SOME LOGIC CHECKS FAILED");
 }

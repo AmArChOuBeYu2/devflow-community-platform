@@ -66,7 +66,7 @@ function detectDevice() {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [allSessions, setAllSessions] = useState<UserSession[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityAuditLog[]>([]);
   const [activeResetChallenge, setActiveResetChallenge] = useState<{
     identifier: string;
@@ -78,10 +78,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     Storage.init();
     const curr = Storage.getCurrentUser();
-    setUser(curr);
-    setUsers(Storage.getAllUsers());
-    setSessions(Storage.getSessions());
+    const allUsers = Storage.getAllUsers();
+    const storedSessions = Storage.getSessions();
+    setUsers(allUsers);
     setSecurityLogs(Storage.getSecurityLogs());
+
+    if (curr) {
+      const expiryMinutes = curr.sessionExpiryMinutes || 60;
+      const expiryMs = expiryMinutes * 60 * 1000;
+      const userSessions = storedSessions.filter((s) => s.userId === curr.id);
+      const currentSession = userSessions.find((s) => s.isCurrent) || userSessions[0];
+
+      if (currentSession && Date.now() - new Date(currentSession.lastActiveAt).getTime() > expiryMs) {
+        // Session expired due to inactivity
+        Storage.clearCurrentUser();
+        setUser(null);
+        const expiredSessions = storedSessions.map((s) => (s.id === currentSession.id ? { ...s, isCurrent: false } : s));
+        setAllSessions(expiredSessions);
+        Storage.saveSessions(expiredSessions);
+      } else {
+        setUser(curr);
+        const nowIso = new Date().toISOString();
+        const refreshed = storedSessions.map((s) => {
+          if (currentSession && s.id === currentSession.id) {
+            return { ...s, isCurrent: true, lastActiveAt: nowIso };
+          }
+          return s;
+        });
+        setAllSessions(refreshed);
+        Storage.saveSessions(refreshed);
+      }
+    } else {
+      setUser(null);
+      setAllSessions(storedSessions);
+    }
+
+    let lastActivityTime = Date.now();
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityTime > 60000) {
+        lastActivityTime = now;
+        const currentU = Storage.getCurrentUser();
+        if (currentU) {
+          const sessionsNow = Storage.getSessions();
+          const updated = sessionsNow.map((s) => (s.userId === currentU.id && s.isCurrent ? { ...s, lastActiveAt: new Date().toISOString() } : s));
+          Storage.saveSessions(updated);
+          setAllSessions(updated);
+        }
+      }
+    };
+
+    window.addEventListener("click", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity, { passive: true });
+
+    return () => {
+      window.removeEventListener("click", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
   }, []);
 
   const switchUser = (userId: string) => {
@@ -89,6 +142,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (found) {
       setUser(found);
       Storage.setCurrentUser(found);
+
+      const sessionsFromStorage = Storage.getSessions();
+      const userSessions = sessionsFromStorage.filter((s) => s.userId === userId);
+      let updated: UserSession[];
+      if (userSessions.length > 0) {
+        updated = sessionsFromStorage.map((s) => {
+          if (s.userId === userId) {
+            return { ...s, isCurrent: s.id === userSessions[0].id, lastActiveAt: new Date().toISOString() };
+          }
+          return s;
+        });
+      } else {
+        const device = detectDevice();
+        const newSession: UserSession = {
+          id: "session-" + Date.now(),
+          userId: found.id,
+          browser: device.browser,
+          os: device.os,
+          deviceType: device.deviceType,
+          ip: device.ip,
+          location: device.location,
+          createdAt: new Date().toISOString(),
+          lastActiveAt: new Date().toISOString(),
+          isCurrent: true,
+          isTrusted: true,
+        };
+        updated = [newSession, ...sessionsFromStorage];
+      }
+      setAllSessions(updated);
+      Storage.saveSessions(updated);
     }
   };
 
@@ -189,11 +272,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isTrusted: rememberDevice,
     };
 
+    const currentSessions = Storage.getSessions();
     const updatedSessions = [
       newSession,
-      ...sessions.map((s) => ({ ...s, isCurrent: false })),
+      ...currentSessions.map((s) => (s.userId === matched.id ? { ...s, isCurrent: false } : s)),
     ];
-    setSessions(updatedSessions);
+    setAllSessions(updatedSessions);
     Storage.saveSessions(updatedSessions);
 
     const audit: SecurityAuditLog = {
@@ -288,8 +372,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isCurrent: true,
       isTrusted: true,
     };
-    const updatedSessions = [newSession, ...sessions.map((s) => ({ ...s, isCurrent: false }))];
-    setSessions(updatedSessions);
+    const currentSessions = Storage.getSessions();
+    const updatedSessions = [
+      newSession,
+      ...currentSessions.map((s) => (s.userId === newUser.id ? { ...s, isCurrent: false } : s)),
+    ];
+    setAllSessions(updatedSessions);
     Storage.saveSessions(updatedSessions);
 
     return { success: true };
@@ -297,36 +385,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     if (user) {
-      const updated = sessions.filter((s) => !s.isCurrent);
-      setSessions(updated);
+      const currentSessions = Storage.getSessions();
+      const updated = currentSessions.map((s) => (s.userId === user.id && s.isCurrent ? { ...s, isCurrent: false } : s));
+      setAllSessions(updated);
       Storage.saveSessions(updated);
+      setUser(null);
+      Storage.clearCurrentUser();
     }
   };
 
   const revokeSession = (sessionId: string) => {
-    const updated = sessions.filter((s) => s.id !== sessionId);
-    setSessions(updated);
+    if (!user) return;
+    const currentSessions = Storage.getSessions();
+    const target = currentSessions.find((s) => s.id === sessionId);
+    if (!target || target.userId !== user.id) return;
+
+    const updated = currentSessions.filter((s) => s.id !== sessionId);
+    setAllSessions(updated);
     Storage.saveSessions(updated);
 
-    if (user) {
-      const audit: SecurityAuditLog = {
-        id: "sec-" + Date.now(),
-        userId: user.id,
-        userName: user.name,
-        action: "session_revoked",
-        ...detectDevice(),
-        timestamp: new Date().toISOString(),
-        details: `Revoked session ${sessionId}.`,
-      };
-      const updatedAudit = [audit, ...securityLogs];
-      setSecurityLogs(updatedAudit);
-      Storage.saveSecurityLogs(updatedAudit);
-    }
+    const audit: SecurityAuditLog = {
+      id: "sec-" + Date.now(),
+      userId: user.id,
+      userName: user.name,
+      action: "session_revoked",
+      ...detectDevice(),
+      timestamp: new Date().toISOString(),
+      details: `Revoked session ${sessionId}.`,
+    };
+    const updatedAudit = [audit, ...securityLogs];
+    setSecurityLogs(updatedAudit);
+    Storage.saveSecurityLogs(updatedAudit);
   };
 
   const revokeAllOtherSessions = () => {
-    const updated = sessions.filter((s) => s.isCurrent);
-    setSessions(updated);
+    if (!user) return;
+    const currentSessions = Storage.getSessions();
+    const updated = currentSessions.filter((s) => s.userId !== user.id || s.isCurrent);
+    setAllSessions(updated);
     Storage.saveSessions(updated);
   };
 
@@ -550,12 +646,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
+  const userSessions = user ? allSessions.filter((s) => s.userId === user.id) : [];
+
   return (
     <AuthContext.Provider
       value={{
         user,
         users,
-        sessions,
+        sessions: userSessions,
         securityLogs,
         login,
         register,
