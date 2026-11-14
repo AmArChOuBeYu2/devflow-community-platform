@@ -17,7 +17,7 @@
 
 1. **Community Feed & Social Platform** (Updates, code snippets, project showcases, achievements, hashtags, mentions, threaded comments, replies, sharing, bookmarks, reporting, and admin moderation).
 2. **Forgot Password & Letters-Only Password Generator** (Dual recovery via registered email or mobile phone, strict 1 request per calendar day rate limiting, 6-digit challenge code verification, and cryptographic password generator containing strictly uppercase and lowercase letters `[A-Za-z]`).
-3. **Subscriptions & Premium Membership** (Free, Bronze @ ₹99/mo, Silver @ ₹299/mo, Gold @ ₹999/mo tiers with daily question quotas, advanced search privileges, bookmark quotas, simulated Razorpay checkout with evaluation sandbox notice, and official downloadable GST tax invoice PDFs).
+3. **Subscriptions & Premium Membership** (Free, Bronze @ ₹99/mo, Silver @ ₹299/mo, Gold @ ₹999/mo tiers with daily question quotas, advanced search privileges, bookmark quotas, simulated Razorpay checkout with evaluation sandbox notice, and downloadable demo receipts).
 4. **Reputation Engine & Community Transfers** (Comprehensive reward rules: +5 answer posting, +10 accepted solution, +2 for 10 question upvotes [idempotent], +5 for 5 answer upvotes [idempotent], -2 downvotes, -5 answer deletion, -10 admin guideline violation removal; privilege thresholds at 50, 100, 250, and 500 reputation points; peer-to-peer reputation transfers with strict guards: >50 balance, ≤50/tx, ≤100/day).
 5. **Multi-Language Support with Security Verification** (English, Spanish, Hindi, Portuguese, Chinese, French; French requires Email OTP challenge; other five languages require Mobile OTP challenge; language switch applied only upon verified challenge).
 6. **Advanced Login Security, Session Management & Device Telemetry** (Multi-device session tracking, real client header detection via `/api/auth/session`, remote session revocation, session timeout management, and administrator moderation and suspension center).
@@ -80,7 +80,7 @@ Use the **"Switch User"** pill in the top navigation bar or log in manually at `
   | **Silver** | ₹299 / mo | 15 / day | Silver Champion | Priority support, enhanced visibility, unlimited bookmarks |
   | **Gold** | ₹999 / mo | Unlimited | Gold VIP Master | Top search priority, featured profile, VIP support |
 - **Razorpay Checkout:** Realistic gateway modal supporting UPI (Google Pay, PhonePe, Paytm), Cards, and NetBanking in evaluation sandbox mode (clearly labeled as DEMO CHECKOUT; no real charge).
-- **Downloadable PDF Demo Invoices:** Itemized demo receipts generated via `jspdf` featuring subtotal, 18% IGST calculation breakdown, GSTIN, and clear DEMO RECEIPT notice.
+- **Downloadable PDF Demo Receipts:** Itemized demo receipts generated via `jspdf` featuring subtotal, 18% IGST calculation breakdown, GSTIN, and clear DEMO RECEIPT notice.
 
 ### 🏆 Task 4: Reputation Points System & Transfers
 - **Point Triggers:**
@@ -156,9 +156,9 @@ npm run build
 2. **Core Q&A & Daily Quotas (0:30 - 1:15):** Show the homepage Top Questions feed, upvoting, answering (+5 rep), and how daily question limits adapt based on tier (Free: 1/day, Bronze: 5/day).
 3. **Community Feed & Moderation (1:15 - 2:00):** Show posting a snippet/showcase, liking, commenting, and reporting content (500+ rep privilege). Show admin moderation at `/admin/moderation`.
 4. **Forgot Password (2:00 - 2:45):** Demonstrate `/forgot-password`, trigger the 1-per-day rate limit warning (*"You can use this option only one time per day."*), verify OTP, and click "Generate Random Password" highlighting letters-only `[A-Za-z]`.
-5. **Subscriptions & PDF Invoices (2:45 - 3:30):** Open `/pricing`, select Silver plan, complete simulated Razorpay checkout, and download the GST tax invoice PDF with 18% IGST breakdown.
+5. **Subscriptions & Demo Receipts (2:45 - 3:30):** Open `/pricing`, select Silver plan, complete simulated checkout in evaluation sandbox mode, and download the demo receipt PDF with 18% IGST calculation breakdown.
 6. **Multi-Language OTP & Security (3:30 - 4:15):** Switch to French (triggers Email OTP) vs Hindi/Spanish (triggers Mobile OTP). Open `/profile/security` to show active sessions and revoke remote sessions.
-7. **Conclusion (4:15 - 4:45):** Highlight the 100% automated test pass rate and thank the Elevance Skills team!
+7. **Conclusion (4:15 - 4:45):** Summarize the verified logic checks (18/18 logic tests passed), clean production build (22 routes), and thank the Elevance Skills team!
 
 ---
 

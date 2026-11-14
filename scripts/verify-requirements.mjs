@@ -1,10 +1,13 @@
-// Standalone verification script for DevFlow Community Platform
-// Tests all 6 Elevance Skills internship tasks + Core Stack Overflow Q&A features
+// Standalone unit and boundary logic test script for DevFlow Community Platform
+// Tests core logic rules for all 6 Elevance Skills internship tasks + Stack Overflow Q&A
+// NOTE: These tests use self-contained mock functions; they are unit & boundary logic checks,
+// not browser E2E tests, and do not independently verify actual application workflows.
 
 import assert from "node:assert";
 
 console.log("================================================================");
-console.log("   DEVFLOW: END-TO-END VERIFICATION & REQUIREMENTS TEST SUITE   ");
+console.log("   DEVFLOW: UNIT & BOUNDARY LOGIC CHECKS TEST SUITE             ");
+console.log("   (Self-contained logic rules; not browser E2E workflows)      ");
 console.log("================================================================\n");
 
 let passedTests = 0;
@@ -375,10 +378,10 @@ runTest("Suspension guard: Suspended users are barred from questions, answers, p
 // SUMMARY
 // ============================================================================
 console.log("\n================================================================");
-console.log(`   TOTAL TESTS: ${totalTests} | PASSED: ${passedTests} | FAILED: ${totalTests - passedTests}`);
+console.log(`   TOTAL LOGIC CHECKS: ${totalTests} | PASSED: ${passedTests} | FAILED: ${totalTests - passedTests}`);
 if (passedTests === totalTests) {
-  console.log("   VERIFICATION RESULT: ALL REQUIREMENTS PASS (100%)");
+  console.log("   RESULT: ALL 18 LOGIC & BOUNDARY CHECKS PASSED");
 } else {
-  console.log("   VERIFICATION RESULT: SOME TESTS FAILED");
+  console.log("   RESULT: SOME LOGIC CHECKS FAILED");
 }
 console.log("================================================================\n");

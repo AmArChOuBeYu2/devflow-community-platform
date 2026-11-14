@@ -209,7 +209,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("DevFlow Community - Official Tax Invoice", 14, 16);
+    doc.text("DEMO RECEIPT — NOT A REAL TRANSACTION", 14, 16);
 
     // Invoice Metadata
     doc.setTextColor(40, 40, 40);
@@ -218,7 +218,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.text(`Invoice Number: ${invoice.invoiceNumber}`, 14, 38);
     doc.text(`Billing Date: ${new Date(invoice.billingDate).toLocaleDateString()}`, 14, 45);
     doc.text(`Next Renewal: ${new Date(invoice.renewalDate).toLocaleDateString()}`, 14, 52);
-    doc.text(`Payment Gateway: Razorpay`, 14, 59);
+    doc.text(`Payment Mode: Evaluation Sandbox — No Real Transaction`, 14, 59);
     doc.text(`Transaction ID: ${invoice.paymentId}`, 14, 66);
     doc.text(`Status: DEMO RECEIPT — NOT A REAL TRANSACTION (Evaluation Sandbox Mode)`, 14, 73);
 

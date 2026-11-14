@@ -1,12 +1,12 @@
-# DEVFLOW END-TO-END VERIFICATION & TEST REPORT
+# DEVFLOW VERIFICATION & TEST REPORT
 ## Stack Overflow Base Platform + All Six Elevance Skills Internship Tasks
 
 **Repository:** `https://github.com/AmArChOuBeYu2/devflow-community-platform`  
 **Live Production URL:** `https://devflow-community-platform.vercel.app`  
 **Admin Route:** `https://devflow-community-platform.vercel.app/admin/moderation`  
 **Date of Testing:** November 15, 2026  
-**Test Suite Script:** `scripts/verify-requirements.mjs`  
-**Verification Result:** 100% PASS (18/18 Automated Tests Passed, Build Succeeded with 0 Errors)
+**Test Suite Script:** `scripts/verify-requirements.mjs` (Unit & Boundary Logic Checks)  
+**Verification Result:** 18/18 Unit & Boundary Logic Checks Passed; Production Build Succeeded (Exit Code 0 across 22 routes)
 
 ---
 
@@ -17,11 +17,13 @@
 - **Style Engine:** Tailwind CSS 4
 - **State Management:** React Context Providers (`AuthContext`, `QuestionsContext`, `CommunityContext`, `SubscriptionContext`, `ReputationContext`, `LanguageContext`)
 - **Persistence Layer:** Client-side local persistence (`Storage`) with automatic seed migrations, plus Next.js Route Handlers (`/api/auth/session`, `/api/community/posts`, `/api/payments/razorpay/create-order`, `/api/auth/forgot-password`)
-- **PDF Engine:** jsPDF for vector tax invoice rendering
+- **PDF Engine:** jsPDF for vector demo receipt rendering
 
 ---
 
-## 2. Automated Test Suite Execution
+## 2. Unit & Boundary Logic Checks Execution
+
+> **Scope & Methodology Note:** The 18 automated checks in `scripts/verify-requirements.mjs` test isolated business logic rules, calculations, and constraints using self-contained helper functions (idempotency, regex matching, tier quotas, math formulas, and permission guards). They are unit and boundary logic checks, NOT full-browser end-to-end integration tests.
 
 Executed via command:
 ```bash
@@ -31,7 +33,8 @@ node scripts/verify-requirements.mjs
 ### Execution Log Output:
 ```text
 ================================================================
-   DEVFLOW: END-TO-END VERIFICATION & REQUIREMENTS TEST SUITE   
+   DEVFLOW: UNIT & BOUNDARY LOGIC CHECKS TEST SUITE             
+   (Self-contained logic rules; not browser E2E workflows)      
 ================================================================
 
 --- SECTION 1: CORE STACK OVERFLOW Q&A FOUNDATION ---
@@ -67,8 +70,8 @@ node scripts/verify-requirements.mjs
   [PASS] Suspension guard: Suspended users are barred from questions, answers, posts, comments, votes
 
 ================================================================
-   TOTAL TESTS: 18 | PASSED: 18 | FAILED: 0
-   VERIFICATION RESULT: ALL REQUIREMENTS PASS (100%)
+   TOTAL LOGIC CHECKS: 18 | PASSED: 18 | FAILED: 0
+   RESULT: ALL 18 LOGIC & BOUNDARY CHECKS PASSED
 ================================================================
 ```
 
@@ -113,7 +116,12 @@ All 22 routes compiled cleanly with zero TypeScript or linting errors.
 
 ---
 
-## 4. Evaluator Manual Verification Walkthrough
+## 4. Evaluator Verification Walkthrough & Methodology Distinction
+
+> **Testing Scope & Verification Types:**
+> - **Automated Logic Checks:** 18 self-contained unit and boundary logic tests in `scripts/verify-requirements.mjs`.
+> - **Code & Architecture Inspection:** Verified models, Route Handlers, TypeScript types, and permission guards. Features not manually clicked in an active browser session are explicitly noted in `PROJECT_AUDIT.md`.
+> - **Manual Browser Verification:** Manually verified in a web browser for the Top Questions feed and responsive layout (`/`), Razorpay sandbox checkout and demo PDF receipt download (`/pricing`), and active device sessions (`/profile/security`).
 
 The platform includes pre-seeded demo accounts with credentials for evaluator testing:
 
