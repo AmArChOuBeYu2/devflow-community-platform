@@ -160,8 +160,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       userEmail: user?.email || "sc62970@gmail.com",
       planTier: targetTier,
       amount: targetPlan.price,
-      status: "paid",
-      isDemo: !hasLiveKeys,
+      status: "demo_verified",
+      isDemo: true, // Always demo — no live Razorpay key configured
       paymentMethod,
       paymentId: hasLiveKeys
         ? `pay_live_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
@@ -189,7 +189,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         senderName: "Billing System",
         senderAvatar: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=100&auto=format&fit=crop&q=80",
         type: "subscription",
-        message: `Invoice ${invNum} paid: You have successfully upgraded to the ${targetPlan.name}!`,
+        message: `[DEMO] Invoice ${invNum}: Subscription activated to ${targetPlan.name} in evaluation sandbox mode. No real payment was charged.`,
         link: "/profile",
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -220,7 +220,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     doc.text(`Next Renewal: ${new Date(invoice.renewalDate).toLocaleDateString()}`, 14, 52);
     doc.text(`Payment Gateway: Razorpay`, 14, 59);
     doc.text(`Transaction ID: ${invoice.paymentId}`, 14, 66);
-    doc.text(`Status: PAID (${invoice.isDemo ? "Evaluation Sandbox Mode" : "Live Production Verified"})`, 14, 73);
+    doc.text(`Status: DEMO RECEIPT — NOT A REAL TRANSACTION (Evaluation Sandbox Mode)`, 14, 73);
 
     // Customer details
     doc.text("Billed To:", 130, 38);
@@ -260,15 +260,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Total section
     doc.line(120, 134, 196, 134);
     doc.setFont("helvetica", "bold");
-    doc.text("Grand Total Paid:", 120, 142);
+    doc.text("Grand Total (Demo - Not Charged):", 120, 142);
     doc.text(`Rs. ${totalAmount}.00`, 170, 142);
 
     // Footer note
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(120, 120, 120);
-    doc.text("This is an electronically generated receipt for your Elevance Skills DevFlow subscription.", 14, 160);
-    doc.text("GSTIN: 27AABCT3518Q1ZV • HSN/SAC: 998431", 14, 166);
+    doc.text("DEMO RECEIPT — This is a simulated invoice generated for internship evaluation purposes. No real payment was processed.", 14, 160);
+    doc.text("GSTIN: 27AABCT3518Q1ZV • HSN/SAC: 998431 (Demo values only)", 14, 166);
     doc.text("For billing support or queries, contact support@devflow.org or training@elevanceskills.com", 14, 172);
 
     doc.save(`DevFlow_Invoice_${invoice.invoiceNumber}.pdf`);

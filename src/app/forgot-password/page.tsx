@@ -281,7 +281,7 @@ export default function ForgotPasswordPage() {
                   <span>Challenge Verification</span>
                 </p>
                 <p className="text-[11px] text-blue-700 dark:text-blue-300">
-                  Verification challenge sent for <strong className="font-mono">{identifier}</strong>.
+                  In a production deployment, an OTP would be dispatched to <strong className="font-mono">{identifier}</strong>. For this demo, no email or SMS provider is connected; your demo verification code is generated locally below.
                 </p>
               </div>
 
@@ -289,7 +289,7 @@ export default function ForgotPasswordPage() {
               {activeResetChallenge && (
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs flex items-center justify-between">
                   <span className="text-amber-800 dark:text-amber-300 text-[11px]">
-                    Development Challenge Code: <strong className="font-mono font-bold tracking-widest">{activeResetChallenge.code}</strong>
+                    Demo Verification Code: <strong className="font-mono font-bold tracking-widest">{activeResetChallenge.code}</strong>
                   </span>
                   <button
                     type="button"

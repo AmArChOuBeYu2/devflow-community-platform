@@ -80,10 +80,11 @@ export default function SecurityPage() {
           <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-100 flex items-start gap-3 shadow-md animate-in fade-in">
             <Mail className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-sm">Security Alert Email Sent</p>
+              <p className="font-bold text-sm">🔔 Simulated Security Alert (Demo — No Real Email Sent)</p>
               <p className="mt-0.5 text-blue-700 dark:text-blue-300">
-                &quot;New login detected from Safari on iOS (Bengaluru, India). If this was not you, revoke the session immediately below.&quot;
+                In production, an email would be sent: &quot;New login detected from Safari on iOS (Bengaluru, India). If this was not you, revoke the session immediately below.&quot;
               </p>
+              <p className="mt-1 text-[11px] text-blue-600 dark:text-blue-400 italic">Demo only: no actual email is dispatched. A real SMTP provider is required for live alerts.</p>
             </div>
           </div>
         )}
@@ -148,8 +149,8 @@ export default function SecurityPage() {
 
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                       <span>OS: <strong className="text-gray-700 dark:text-gray-300">{s.os}</strong></span>
-                      <span>IP Address: <strong className="font-mono text-gray-700 dark:text-gray-300">{s.ip}</strong></span>
-                      <span>Location: <strong className="text-gray-700 dark:text-gray-300">{s.location}</strong></span>
+                      <span>IP: <strong className="font-mono text-gray-700 dark:text-gray-300">{s.ip}</strong> <span className="text-[10px] text-gray-400">(simulated)</span></span>
+                      <span>Location: <strong className="text-gray-700 dark:text-gray-300">{s.location}</strong> <span className="text-[10px] text-gray-400">(simulated)</span></span>
                     </div>
 
                     <span className="text-[11px] text-gray-400 block">
@@ -248,7 +249,7 @@ export default function SecurityPage() {
                       {log.browser} ({log.os})
                     </td>
                     <td className="py-3 px-4 font-mono text-gray-600 dark:text-gray-400">
-                      {log.ip} • {log.location}
+                      {log.ip} • {log.location} <span className="text-[10px] text-gray-400 not-italic">(sim.)</span>
                     </td>
                     <td className="py-3 px-4 text-gray-500 italic">
                       {log.details}

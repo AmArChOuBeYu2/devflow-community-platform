@@ -79,8 +79,8 @@ Use the **"Switch User"** pill in the top navigation bar or log in manually at `
   | **Bronze** | ₹99 / mo | 5 / day | Bronze Supporter | Advanced search filters (tags, status, votes) |
   | **Silver** | ₹299 / mo | 15 / day | Silver Champion | Priority support, enhanced visibility, unlimited bookmarks |
   | **Gold** | ₹999 / mo | Unlimited | Gold VIP Master | Top search priority, featured profile, VIP support |
-- **Razorpay Checkout:** Realistic gateway modal supporting UPI (Google Pay, PhonePe, Paytm), Cards, and NetBanking with transparent evaluation sandbox mode notice.
-- **Downloadable PDF Tax Invoices:** Official tax invoices generated via `jspdf` featuring subtotal, 18% IGST calculation breakdown, and GSTIN.
+- **Razorpay Checkout:** Realistic gateway modal supporting UPI (Google Pay, PhonePe, Paytm), Cards, and NetBanking in evaluation sandbox mode (clearly labeled as DEMO CHECKOUT; no real charge).
+- **Downloadable PDF Demo Invoices:** Itemized demo receipts generated via `jspdf` featuring subtotal, 18% IGST calculation breakdown, GSTIN, and clear DEMO RECEIPT notice.
 
 ### 🏆 Task 4: Reputation Points System & Transfers
 - **Point Triggers:**
@@ -99,12 +99,12 @@ Use the **"Switch User"** pill in the top navigation bar or log in manually at `
 ### 🌐 Task 5: Multi-Language OTP Verification
 - **6 Supported Languages:** English (`en`), Spanish (`es`), Hindi (`hi`), Portuguese (`pt`), Chinese (`zh`), French (`fr`).
 - **Channel Routing Rule:**
-  - Switching to **French** dispatches an OTP challenge to the user's **registered email address**.
-  - Switching to any of the **other 5 languages** dispatches an OTP challenge to the user's **registered mobile phone number**.
+  - Switching to **French** requires verification via the user's **registered email address** (demo OTP generated locally; no external email sent).
+  - Switching to any of the **other 5 languages** requires verification via the user's **registered mobile phone number** (demo OTP generated locally; no external SMS sent).
 - **Security Guard:** The target language is applied and persisted only after the 6-digit OTP challenge is verified.
 
 ### 🛡️ Task 6: Login Sessions & Device Management
-- **Device Telemetry:** Server-side request inspection via `/api/auth/session` detecting real Client IP, User-Agent, Operating System, Browser engine, and Device Type.
+- **Device Telemetry:** Client-side UA detection and Next.js Route Handler `/api/auth/session` request inspection. IP and location fields are explicitly labeled with `(simulated)` where mock/fallback values apply.
 - **Session Management (`/profile/security`):** Active sessions list, individual remote session revocation, and "Revoke All Other Sessions" button.
 - **Inactivity Timeout:** Configurable session expiry (15m, 30m, 1h, 24h, 7d).
 - **Account Suspension Guard:** Suspended accounts are barred from asking questions, posting answers, creating feed posts, commenting, reacting, and voting.

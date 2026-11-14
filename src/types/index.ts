@@ -189,7 +189,7 @@ export interface SubscriptionInvoice {
   userEmail: string;
   planTier: UserTier;
   amount: number; // in INR
-  status: "paid" | "failed" | "demo_verified";
+  status: "paid" | "failed" | "demo_verified" | "demo";
   isDemo?: boolean;
   paymentMethod: string;
   paymentId: string;

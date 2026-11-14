@@ -503,6 +503,7 @@ export default function ProfilePage() {
                         <th className="py-2.5 px-4">Plan Tier</th>
                         <th className="py-2.5 px-4">Date</th>
                         <th className="py-2.5 px-4">Amount</th>
+                        <th className="py-2.5 px-4">Status</th>
                         <th className="py-2.5 px-4 rounded-r-xl text-right">Action</th>
                       </tr>
                     </thead>
@@ -513,6 +514,17 @@ export default function ProfilePage() {
                           <td className="py-3 px-4 capitalize font-semibold">{inv.planTier}</td>
                           <td className="py-3 px-4 text-gray-500">{new Date(inv.billingDate).toLocaleDateString()}</td>
                           <td className="py-3 px-4 font-bold">₹{inv.amount}.00</td>
+                          <td className="py-3 px-4">
+                            {inv.status === "paid" && !inv.isDemo ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+                                PAID
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                                DEMO RECEIPT
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-right">
                             <button
                               onClick={() => downloadInvoicePdf(inv)}
@@ -583,7 +595,7 @@ export default function ProfilePage() {
                         )}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        {s.os} • IP: <span className="font-mono text-gray-600 dark:text-gray-300">{s.ip}</span> • Location: {s.location}
+                        {s.os} • IP: <span className="font-mono text-gray-600 dark:text-gray-300">{s.ip}</span> <span className="text-[10px] text-gray-400">(simulated)</span> • Location: {s.location} <span className="text-[10px] text-gray-400">(simulated)</span>
                       </p>
                       <span className="text-[10px] text-gray-400 block mt-0.5">
                         Logged in: {new Date(s.createdAt).toLocaleDateString()}

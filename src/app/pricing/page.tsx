@@ -222,9 +222,15 @@ export default function PricingPage() {
                         ₹{inv.amount}.00
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-                          {inv.status.toUpperCase()}
-                        </span>
+                        {inv.status === "paid" && !inv.isDemo ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+                            PAID
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                            DEMO RECEIPT
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button

@@ -87,27 +87,29 @@ Route (app)                                 Size  First Load JS
 ┌ ○ /                                     5.4 kB         251 kB
 ├ ○ /_not-found                             1 kB         104 kB
 ├ ○ /admin/moderation                    3.69 kB         250 kB
-├ ƒ /api/auth/forgot-password              134 B         103 kB
-├ ƒ /api/auth/session                      134 B         103 kB
-├ ƒ /api/community/posts                   134 B         103 kB
-├ ƒ /api/payments/razorpay/create-order    134 B         103 kB
+├ ƒ /api/auth/forgot-password              139 B         103 kB
+├ ƒ /api/auth/session                      139 B         103 kB
+├ ƒ /api/billing/create-order              139 B         103 kB
+├ ƒ /api/billing/verify-payment            139 B         103 kB
+├ ƒ /api/community/posts                   139 B         103 kB
+├ ƒ /api/payments/razorpay/create-order    139 B         103 kB
 ├ ○ /community                           8.77 kB         255 kB
-├ ○ /forgot-password                     4.31 kB         131 kB
+├ ○ /forgot-password                     4.38 kB         131 kB
 ├ ○ /login                               2.47 kB         129 kB
-├ ○ /pricing                             5.89 kB         252 kB
-├ ○ /profile                             7.33 kB         256 kB
-├ ○ /profile/security                    3.95 kB         250 kB
+├ ○ /pricing                             5.92 kB         252 kB
+├ ○ /profile                             7.45 kB         257 kB
+├ ○ /profile/security                    4.12 kB         250 kB
 ├ ○ /questions                           5.94 kB         252 kB
 ├ ƒ /questions/[id]                      6.66 kB         253 kB
-├ ○ /questions/ask                       8.96 kB         247 kB
+├ ○ /questions/ask                       9.06 kB         247 kB
 ├ ○ /register                            1.96 kB         129 kB
 ├ ○ /tags                                4.44 kB         250 kB
-├ ○ /users                               2.58 kB         248 kB
-└ ƒ /users/[id]                          2.39 kB         251 kB
+├ ○ /users                               2.58 kB         249 kB
+└ ƒ /users/[id]                          2.39 kB         252 kB
 + First Load JS shared by all             103 kB
 ```
 
-All 20 routes rendered with zero TypeScript or linting errors.
+All 22 routes compiled cleanly with zero TypeScript or linting errors.
 
 ---
 
@@ -172,11 +174,11 @@ The platform includes pre-seeded demo accounts with credentials for evaluator te
    - **Gold Plan**: ₹999/month, Unlimited questions, Gold VIP badge, top search priority.
 3. Click **Upgrade to Silver (₹299/month)**.
 4. The Razorpay modal opens with clear **Evaluation Sandbox Mode** notice.
-5. Select payment mode (UPI, Card, NetBanking) and click **Pay ₹299 via Razorpay**.
-6. Payment succeeds: user profile immediately upgrades to Silver tier; question limit increases to 15/day; unlimited bookmarks unlocked.
+5. Select payment mode (UPI, Card, NetBanking) and click **Simulate Demo Checkout — ₹299**.
+6. Demo checkout completes: user profile immediately upgrades to Silver tier; question limit increases to 15/day; unlimited bookmarks unlocked; demo receipt created with status `demo_verified` (no real money charged).
 7. Click **Download Invoice (PDF)**:
    - Downloads `DevFlow_Invoice_INV-2026-XXXX.pdf`.
-   - Inspect PDF: Brand header, invoice number, transaction ID, customer billing info, itemized rate (Rs. 253.39), 18% IGST (Rs. 45.61), Grand Total (Rs. 299.00), and GSTIN.
+   - Inspect PDF: Brand header, invoice number, transaction ID, customer billing info, itemized rate (Rs. 253.39), 18% IGST (Rs. 45.61), Grand Total (Demo - Not Charged: Rs. 299.00), GSTIN, and clear DEMO RECEIPT notice.
 
 ---
 

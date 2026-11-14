@@ -52,11 +52,11 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({ isOpen, onClose, t
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-bold tracking-tight text-base">Razorpay</span>
-                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-400/30 uppercase font-semibold">
-                  Secure Checkout
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30 uppercase font-semibold">
+                  Demo Checkout
                 </span>
               </div>
-              <p className="text-xs text-gray-300">DevFlow Community Technologies Pvt Ltd</p>
+              <p className="text-xs text-gray-300">DevFlow Community • Evaluation Sandbox</p>
             </div>
           </div>
           <button onClick={handleClose} className="text-gray-400 hover:text-white transition">
@@ -70,11 +70,12 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({ isOpen, onClose, t
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Payment Successful!
+              Demo Payment Complete
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               Your subscription has been activated to the{" "}
-              <strong className="text-primary font-semibold">{plan.name}</strong>. A confirmation email and tax invoice have been dispatched to your account.
+              <strong className="text-primary font-semibold">{plan.name}</strong>{" "}
+              in <strong>Evaluation Sandbox Mode</strong>. No real payment was charged. Download your demo receipt below.
             </p>
 
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-left text-xs space-y-2 border border-gray-200 dark:border-gray-700">
@@ -87,7 +88,7 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({ isOpen, onClose, t
                 <span className="font-mono text-gray-900 dark:text-white">{successInvoice.paymentId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Amount Paid:</span>
+                <span className="text-gray-500">Amount (Demo):</span>
                 <span className="font-bold text-green-600">₹{successInvoice.amount}.00</span>
               </div>
             </div>
@@ -231,8 +232,8 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({ isOpen, onClose, t
             )}
 
             <div className="flex items-center space-x-2 text-[11px] text-gray-500 justify-center">
-              <ShieldCheck className="w-4 h-4 text-green-600" />
-              <span>PCI-DSS Level 1 Compliant 256-bit Encrypted Transaction</span>
+              <ShieldCheck className="w-4 h-4 text-amber-500" />
+              <span>Demo Sandbox Checkout • No real money charged</span>
             </div>
 
             <button
@@ -243,11 +244,11 @@ export const RazorpayModal: React.FC<RazorpayModalProps> = ({ isOpen, onClose, t
               {processing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Processing Payment with Razorpay...</span>
+                  <span>Simulating Demo Checkout...</span>
                 </>
               ) : (
                 <>
-                  <span>Pay ₹{plan.price} via Razorpay</span>
+                  <span>Simulate Demo Checkout — ₹{plan.price}</span>
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </>
               )}
