@@ -99,6 +99,27 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
     setFeedbackMsg(res.message);
   };
 
+  const handleVoteQuestion = (dir: 1 | -1) => {
+    const res = voteQuestion(question.id, dir);
+    if (res?.message) {
+      setFeedbackMsg(res.message);
+    }
+  };
+
+  const handleVoteAnswer = (ansId: string, dir: 1 | -1) => {
+    const res = voteAnswer(ansId, dir);
+    if (res?.message) {
+      setFeedbackMsg(res.message);
+    }
+  };
+
+  const handleMarkAccepted = (ansId: string) => {
+    const res = markAnswerAccepted(question.id, ansId);
+    if (res?.message) {
+      setFeedbackMsg(res.message);
+    }
+  };
+
   return (
     <div className="flex w-full">
       <Sidebar />
@@ -152,7 +173,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
           {/* Vote Controls */}
           <div className="flex flex-col items-center gap-1 shrink-0">
             <button
-              onClick={() => voteQuestion(question.id, 1)}
+              onClick={() => handleVoteQuestion(1)}
               className={`p-2 rounded-xl border transition ${
                 userVote === 1
                   ? "bg-primary text-white border-primary"
@@ -166,7 +187,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               {question.votes}
             </span>
             <button
-              onClick={() => voteQuestion(question.id, -1)}
+              onClick={() => handleVoteQuestion(-1)}
               className={`p-2 rounded-xl border transition ${
                 userVote === -1
                   ? "bg-red-500 text-white border-red-500"
@@ -323,7 +344,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                     {/* Vote & Accept Controls */}
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <button
-                        onClick={() => voteAnswer(ans.id, 1)}
+                        onClick={() => handleVoteAnswer(ans.id, 1)}
                         className={`p-1.5 rounded-xl border transition ${
                           ansVote === 1
                             ? "bg-primary text-white border-primary"
@@ -337,7 +358,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                         {ans.votes}
                       </span>
                       <button
-                        onClick={() => voteAnswer(ans.id, -1)}
+                        onClick={() => handleVoteAnswer(ans.id, -1)}
                         className={`p-1.5 rounded-xl border transition ${
                           ansVote === -1
                             ? "bg-red-500 text-white border-red-500"
@@ -351,7 +372,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                       {/* Accept Button (Only Question Author can mark) */}
                       {isQuestionAuthor && (
                         <button
-                          onClick={() => markAnswerAccepted(question.id, ans.id)}
+                          onClick={() => handleMarkAccepted(ans.id)}
                           className={`mt-2 p-1.5 rounded-xl border transition ${
                             isAccepted
                               ? "bg-green-600 text-white border-green-600 shadow-sm"

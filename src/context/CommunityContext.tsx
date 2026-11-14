@@ -34,7 +34,7 @@ interface CommunityContextType {
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, users, updateProfile, suspendUser } = useAuth();
+  const { user, users, updateProfile } = useAuth();
   const { deductPoints, canEditCommunityPosts, canReportContent } = useReputation();
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -50,7 +50,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const createPost = (data: Partial<CommunityPost>) => {
-    if (!user) return;
+    if (!user || user.isSuspended) return;
 
     // Extract hashtags from content automatically
     const extractedTags = (data.content?.match(/#[a-z0-9_-]+/gi) || []).map((t) =>
@@ -100,15 +100,18 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const editPost = (postId: string, content: string): { success: boolean; message: string } => {
+    if (!user) return { success: false, message: "Please log in to edit post." };
+    if (user.isSuspended) return { success: false, message: "Your account is suspended." };
+
     const post = posts.find((p) => p.id === postId);
-    if (!post || !user) return { success: false, message: "Post not found or unauthenticated." };
+    if (!post) return { success: false, message: "Post not found." };
 
     // Author can edit, OR users with >= 100 reputation can edit community posts
     const isAuthor = post.authorId === user.id;
     if (!isAuthor && !canEditCommunityPosts) {
       return {
         success: false,
-        message: "Editing community posts requires 100+ reputation points.",
+        message: "Editing other community posts requires 100+ reputation points.",
       };
     }
 
@@ -141,7 +144,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const toggleLike = (postId: string) => {
-    if (!user) return;
+    if (!user || user.isSuspended) return;
 
     const updated = posts.map((p) => {
       if (p.id !== postId) return p;
@@ -161,7 +164,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const addComment = (postId: string, content: string) => {
-    if (!user) return;
+    if (!user || user.isSuspended) return;
 
     const newComment: Comment = {
       id: "c-" + Date.now(),
@@ -196,7 +199,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const addReply = (postId: string, commentId: string, content: string) => {
-    if (!user) return;
+    if (!user || user.isSuspended) return;
 
     const newReply = {
       id: "cr-" + Date.now(),
@@ -248,7 +251,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (typeof window !== "undefined") {
       const shareUrl = `${window.location.origin}/community#${postId}`;
-      navigator.clipboard?.writeText(shareUrl);
+      try {
+        if (navigator?.clipboard?.writeText) {
+          navigator.clipboard.writeText(shareUrl).catch(() => {});
+        }
+      } catch {
+        // Ignore clipboard failure in restricted test environments
+      }
       return shareUrl;
     }
     return "";
@@ -256,6 +265,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const toggleBookmark = (postId: string): { success: boolean; message: string } => {
     if (!user) return { success: false, message: "Please log in to bookmark posts." };
+    if (user.isSuspended) return { success: false, message: "Suspended accounts cannot manage bookmarks." };
 
     const isBookmarked = user.bookmarks.includes(postId);
     const isSilverOrGold = user.tier === "silver" || user.tier === "gold";
@@ -280,7 +290,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const toggleFollowUser = (targetUserId: string) => {
-    if (!user || user.id === targetUserId) return;
+    if (!user || user.isSuspended || user.id === targetUserId) return;
 
     const isFollowingNow = user.following.includes(targetUserId);
     const newFollowing = isFollowingNow
@@ -300,6 +310,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const reportPost = (postId: string, reason: string, details?: string): { success: boolean; message: string } => {
     if (!user) return { success: false, message: "Please log in." };
+
+    if (user.isSuspended) {
+      return { success: false, message: "Suspended accounts cannot submit reports." };
+    }
 
     if (!canReportContent && user.role !== "admin") {
       return {
@@ -336,19 +350,47 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const adminReviewReport = (reportId: string, action: "resolve_delete" | "dismiss" | "suspend_user") => {
+    if (!user || user.role !== "admin") return;
+
     const report = reports.find((r) => r.id === reportId);
-    if (!report || report.status !== "pending" || user?.role !== "admin") return;
+    if (!report || report.status !== "pending") return;
 
     if (action === "resolve_delete") {
       // Remove post
       deletePost(report.postId);
       // Deduct 10 points for guideline violation
       deductPoints(10, `Post removed by admin due to reported guideline violation (#${report.reason})`, report.postId, report.postAuthorId);
+      addNotification(
+        report.postAuthorId,
+        "report",
+        `Your post was removed by an administrator for violating community guidelines (${report.reason}). -10 reputation points deducted.`,
+        "/community"
+      );
     } else if (action === "suspend_user") {
-      // Remove the violating content, suspend the account, and apply the specified demo penalty.
+      // Deduct points and remove
       deletePost(report.postId);
-      suspendUser(report.postAuthorId);
-      deductPoints(50, `Account suspended for repeated guideline violations (report ${report.id})`, report.postId, report.postAuthorId);
+      deductPoints(50, `Account suspended for repeated guideline violations`, report.postId, report.postAuthorId);
+
+      // Persist suspension in all users storage
+      const allUsers = Storage.getAllUsers().map((u) => {
+        if (u.id === report.postAuthorId) {
+          return { ...u, isSuspended: true };
+        }
+        return u;
+      });
+      Storage.set("devflow_all_users", allUsers);
+
+      // If active user is the target, update profile in current state
+      if (user?.id === report.postAuthorId) {
+        updateProfile({ isSuspended: true });
+      }
+
+      addNotification(
+        report.postAuthorId,
+        "report",
+        `Your account has been suspended by an administrator due to repeated community guideline violations. -50 reputation points deducted.`,
+        "/profile"
+      );
     }
 
     const updatedReports = reports.map((r) =>

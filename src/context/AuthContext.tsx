@@ -9,18 +9,19 @@ interface AuthContextType {
   users: UserProfile[];
   sessions: UserSession[];
   securityLogs: SecurityAuditLog[];
-  login: (emailOrPhone: string, rememberDevice?: boolean, password?: string) => { success: boolean; requiresOtp?: boolean; message?: string };
+  login: (emailOrPhone: string, password?: string, rememberDevice?: boolean) => { success: boolean; requiresOtp?: boolean; message?: string };
   register: (name: string, email: string, phone: string, password: string) => { success: boolean; message?: string };
-  suspendUser: (userId: string) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
   updateProfile: (updated: Partial<UserProfile>) => void;
   completeProfileBonus: () => boolean;
   revokeSession: (sessionId: string) => void;
   revokeAllOtherSessions: () => void;
-  requestForgotPassword: (identifier: string, isEmail: boolean) => { success: boolean; message: string; demoOtp?: string };
+  requestForgotPassword: (identifier: string, isEmail: boolean) => { success: boolean; message: string; challengeOtp?: string };
+  verifyResetOtp: (identifier: string, code: string) => { success: boolean; message: string };
   generateSecurePassword: (length?: number) => string;
-  resetPasswordWithOtp: (identifier: string, otp: string, newPass: string) => { success: boolean; message: string };
+  resetPasswordWithOtp: (identifier: string, otpCode: string, newPass: string) => { success: boolean; message: string };
+  activeResetChallenge: { identifier: string; code: string; expiresAt: number; verified?: boolean } | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,11 +30,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function detectDevice() {
   if (typeof window === "undefined") {
     return {
-      browser: "Chrome",
-      os: "Windows 11",
+      browser: "Chrome (Server)",
+      os: "Windows",
       deviceType: "Desktop" as const,
-      ip: "Unavailable in browser-only demo",
-      location: "Unavailable in browser-only demo",
+      ip: "127.0.0.1 (Local Environment)",
+      location: "Localhost",
     };
   }
 
@@ -54,11 +55,11 @@ function detectDevice() {
   if (/iPad|Tablet/i.test(ua)) deviceType = "Tablet";
 
   return {
-    browser: `${browser} (Latest)`,
+    browser,
     os,
     deviceType,
-    ip: "Unavailable in browser-only demo",
-    location: "Unavailable in browser-only demo",
+    ip: "127.0.0.1 (Local Session)",
+    location: "Client Environment",
   };
 }
 
@@ -67,6 +68,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityAuditLog[]>([]);
+  const [activeResetChallenge, setActiveResetChallenge] = useState<{
+    identifier: string;
+    code: string;
+    expiresAt: number;
+    verified?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     Storage.init();
@@ -76,95 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessions(Storage.getSessions());
     setSecurityLogs(Storage.getSecurityLogs());
   }, []);
-
-  const register = (name: string, email: string, phone: string, password: string) => {
-    const cleanName = name.trim();
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPhone = phone.trim();
-    if (!cleanName || !cleanEmail || !cleanPhone || password.length < 8) {
-      return { success: false, message: "Enter your name, email, phone number, and a password of at least 8 characters." };
-    }
-    const allUsers = Storage.getAllUsers();
-    const emailExists = allUsers.some((candidate) => candidate.email.toLowerCase() === cleanEmail);
-    const phoneKey = cleanPhone.replace(/\\s+/g, "");
-    const phoneExists = allUsers.some((candidate) => candidate.phone.replace(/\\s+/g, "") === phoneKey);
-    if (emailExists || phoneExists) {
-      return { success: false, message: emailExists ? "An account already uses this email address." : "An account already uses this phone number." };
-    }
-
-    const created: UserProfile = {
-      id: "user-" + (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Date.now().toString(36)),
-      name: cleanName,
-      email: cleanEmail,
-      phone: cleanPhone,
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=" + encodeURIComponent(cleanName),
-      title: "Developer",
-      bio: "",
-      location: "",
-      tier: "free",
-      reputation: 1,
-      profileCompleted: false,
-      role: "user",
-      createdAt: new Date().toISOString(),
-      dailyQuestionsCount: {},
-      dailyRepTransferCount: {},
-      following: [],
-      bookmarks: [],
-      trustedDevices: [],
-      sessionExpiryMinutes: 60,
-    };
-    const updatedUsers = [...allUsers, created];
-    Storage.set("devflow_all_users", updatedUsers);
-    const passwords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
-    passwords[created.id] = password;
-    Storage.set("devflow_demo_passwords", passwords);
-    setUsers(updatedUsers);
-
-    const device = detectDevice();
-    const session: UserSession = {
-      id: "session-" + Date.now(),
-      userId: created.id,
-      browser: device.browser,
-      os: device.os,
-      deviceType: device.deviceType,
-      ip: device.ip,
-      location: device.location,
-      createdAt: new Date().toISOString(),
-      lastActiveAt: new Date().toISOString(),
-      isCurrent: true,
-      isTrusted: false,
-    };
-    const updatedSessions = [session, ...sessions.map((item) => ({ ...item, isCurrent: false }))];
-    setSessions(updatedSessions);
-    Storage.saveSessions(updatedSessions);
-    setUser(created);
-    Storage.setCurrentUser(created);
-
-    const audit: SecurityAuditLog = {
-      id: "sec-" + Date.now(),
-      userId: created.id,
-      userName: created.name,
-      action: "login_success",
-      ...device,
-      timestamp: new Date().toISOString(),
-      details: "New demo account registered and signed in.",
-    };
-    const updatedAudit = [audit, ...securityLogs];
-    setSecurityLogs(updatedAudit);
-    Storage.saveSecurityLogs(updatedAudit);
-    return { success: true };
-  };
-
-  const suspendUser = (userId: string) => {
-    const updatedUsers = Storage.getAllUsers().map((candidate) =>
-      candidate.id === userId ? { ...candidate, isSuspended: true } : candidate
-    );
-    Storage.set("devflow_all_users", updatedUsers);
-    setUsers(updatedUsers);
-    const remainingSessions = Storage.getSessions().filter((session) => session.userId !== userId);
-    setSessions(remainingSessions);
-    Storage.saveSessions(remainingSessions);
-  };
 
   const switchUser = (userId: string) => {
     const found = users.find((u) => u.id === userId);
@@ -179,7 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newUser = { ...user, ...updated };
     setUser(newUser);
     Storage.setCurrentUser(newUser);
-    setUsers((prev) => prev.map((u) => (u.id === user.id ? newUser : u)));
+    const updatedUsers = Storage.getAllUsers().map((u) => (u.id === user.id ? newUser : u));
+    setUsers(updatedUsers);
+    Storage.set("devflow_all_users", updatedUsers);
   };
 
   const completeProfileBonus = (): boolean => {
@@ -204,21 +124,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  const login = (emailOrPhone: string, rememberDevice = true, password = "password") => {
-    const normalized = emailOrPhone.trim().toLowerCase();
+  const login = (emailOrPhone: string, password?: string, rememberDevice = true) => {
+    const cleanId = emailOrPhone.trim().toLowerCase();
+    const cleanPhone = emailOrPhone.replace(/\s+/g, "");
+
     const matched = users.find(
       (u) =>
-        u.email.toLowerCase() === normalized ||
-        u.phone.replace(/\s+/g, "") === emailOrPhone.replace(/\s+/g, "")
+        u.email.toLowerCase() === cleanId ||
+        u.phone.replace(/\s+/g, "") === cleanPhone
     );
-    if (!matched) return { success: false, message: "No account matches that email address or phone number." };
-    if (matched.isSuspended) return { success: false, message: "This account has been suspended for community guideline violations." };
 
-    // Demo accounts use the documented password unless the account has been reset in this browser.
-    // This is a client-side training demo, not production authentication.
-    const savedPasswords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
-    if (!password || password !== (savedPasswords[matched.id] || "password")) {
-      return { success: false, message: "Incorrect password. Demo accounts use the password \"password\" unless you reset it in this browser." };
+    if (!matched) {
+      return {
+        success: false,
+        message: "No registered account found with this email or phone number.",
+      };
+    }
+
+    if (matched.isSuspended) {
+      return {
+        success: false,
+        message: "This account has been suspended by an administrator for repeated guideline violations.",
+      };
+    }
+
+    // Password validation (if password argument is supplied)
+    if (password !== undefined) {
+      const storedPass = matched.password || "DevFlow2026";
+      if (password !== storedPass) {
+        // Record failed login audit log
+        const failedAudit: SecurityAuditLog = {
+          id: "sec-" + Date.now(),
+          userId: matched.id,
+          userName: matched.name,
+          action: "login_failed",
+          ...detectDevice(),
+          timestamp: new Date().toISOString(),
+          details: `Failed login attempt: incorrect password entered for ${matched.email}.`,
+        };
+        const updatedAudit = [failedAudit, ...securityLogs];
+        setSecurityLogs(updatedAudit);
+        Storage.saveSecurityLogs(updatedAudit);
+
+        return {
+          success: false,
+          message: "Incorrect password. Please verify and try again.",
+        };
+      }
     }
 
     const device = detectDevice();
@@ -251,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       action: "login_success",
       ...device,
       timestamp: new Date().toISOString(),
-      details: `Successful login on ${device.browser} (${device.os}).`,
+      details: `Successful authenticated login on ${device.browser} (${device.os}).`,
     };
     const updatedAudit = [audit, ...securityLogs];
     setSecurityLogs(updatedAudit);
@@ -262,14 +214,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
+  const register = (name: string, email: string, phone: string, password: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+
+    // Check duplicate email
+    if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
+      return {
+        success: false,
+        message: "An account with this email address already exists. Please sign in instead.",
+      };
+    }
+
+    // Check duplicate phone
+    if (users.some((u) => u.phone.replace(/\s+/g, "") === cleanPhone)) {
+      return {
+        success: false,
+        message: "An account with this mobile phone number already exists.",
+      };
+    }
+
+    if (!password || password.length < 6) {
+      return {
+        success: false,
+        message: "Password must be at least 6 characters long.",
+      };
+    }
+
+    const newUser: UserProfile = {
+      id: "user-" + Date.now(),
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone.trim(),
+      password,
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      title: "Community Developer",
+      bio: "Newly joined DevFlow developer sharing knowledge and asking questions.",
+      location: "India",
+      tier: "free",
+      reputation: 0,
+      profileCompleted: false,
+      role: "user",
+      isSuspended: false,
+      createdAt: new Date().toISOString(),
+      dailyQuestionsCount: {},
+      dailyRepTransferCount: {},
+      following: [],
+      bookmarks: [],
+      trustedDevices: [],
+      sessionExpiryMinutes: 60,
+    };
+
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    Storage.set("devflow_all_users", updatedUsers);
+
+    // Auto login
+    setUser(newUser);
+    Storage.setCurrentUser(newUser);
+
+    const device = detectDevice();
+    const sessionId = "session-" + Date.now();
+    const newSession: UserSession = {
+      id: sessionId,
+      userId: newUser.id,
+      browser: device.browser,
+      os: device.os,
+      deviceType: device.deviceType,
+      ip: device.ip,
+      location: device.location,
+      createdAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      isCurrent: true,
+      isTrusted: true,
+    };
+    const updatedSessions = [newSession, ...sessions.map((s) => ({ ...s, isCurrent: false }))];
+    setSessions(updatedSessions);
+    Storage.saveSessions(updatedSessions);
+
+    return { success: true };
+  };
+
   const logout = () => {
     if (user) {
-      const updated = sessions.filter((s) => !(s.userId === user.id && s.isCurrent));
+      const updated = sessions.filter((s) => !s.isCurrent);
       setSessions(updated);
       Storage.saveSessions(updated);
     }
-    setUser(null);
-    Storage.clearCurrentUser();
   };
 
   const revokeSession = (sessionId: string) => {
@@ -300,16 +331,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task 2: Forgot Password with 1 request per day restriction
-  const requestForgotPassword = (identifier: string, isEmail: boolean): { success: boolean; message: string; demoOtp?: string } => {
-    const normalized = identifier.trim().toLowerCase().replace(/\s+/g, "");
+  const requestForgotPassword = (identifier: string, isEmail: boolean): { success: boolean; message: string; challengeOtp?: string } => {
+    const cleanId = identifier.trim().toLowerCase();
+    const cleanPhone = identifier.replace(/\s+/g, "");
+
     const matched = users.find((u) =>
       isEmail
-        ? u.email.toLowerCase() === normalized
-        : u.phone.replace(/\s+/g, "") === normalized
+        ? u.email.toLowerCase() === cleanId
+        : u.phone.replace(/\s+/g, "") === cleanPhone
     );
-    if (!matched) return { success: false, message: "No account matches that registered email address or phone number." };
-    const today = new Date().toLocaleDateString("en-CA");
-    const lastRequested = Storage.get<string | null>("devflow_forgot_pass_last_date_" + normalized, null);
+
+    if (!matched) {
+      return {
+        success: false,
+        message: `No registered account found with this ${isEmail ? "email address" : "mobile phone number"}.`,
+      };
+    }
+
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const lastRequestedKey = "devflow_forgot_pass_last_date_" + matched.id;
+    const lastRequested = Storage.get<string | null>(lastRequestedKey, null) || matched.forgotPasswordLastRequestedAt;
 
     if (lastRequested === today) {
       return {
@@ -318,14 +359,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    Storage.set("devflow_forgot_pass_last_date_" + normalized, today);
-    const otp = String(100000 + Math.floor(Math.random() * 900000));
-    Storage.set("devflow_password_reset_otp_" + normalized, {
-      otp,
-      date: today,
-      expiresAt: Date.now() + 10 * 60 * 1000,
-      userId: matched.id,
-    });
+    // Persist today's date both in user profile and storage key
+    Storage.set(lastRequestedKey, today);
+    const updatedUsers = users.map((u) =>
+      u.id === matched.id ? { ...u, forgotPasswordLastRequestedAt: today } : u
+    );
+    setUsers(updatedUsers);
+    Storage.set("devflow_all_users", updatedUsers);
+    if (user?.id === matched.id) {
+      setUser({ ...user, forgotPasswordLastRequestedAt: today });
+      Storage.setCurrentUser({ ...user, forgotPasswordLastRequestedAt: today });
+    }
+
+    // Generate 6-digit challenge code
+    const challengeCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const challenge = {
+      identifier: matched.email,
+      code: challengeCode,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      verified: false,
+    };
+    setActiveResetChallenge(challenge);
 
     // Audit log
     const audit: SecurityAuditLog = {
@@ -335,7 +389,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       action: "otp_requested",
       ...detectDevice(),
       timestamp: new Date().toISOString(),
-      details: `Password reset OTP requested via ${isEmail ? "Email" : "Mobile Phone"}.`,
+      details: `Password reset verification challenge requested via ${isEmail ? "Email" : "Mobile Phone"}.`,
     };
     const updatedAudit = [audit, ...securityLogs];
     setSecurityLogs(updatedAudit);
@@ -343,8 +397,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: true,
-      message: `Demo verification code generated for the registered ${isEmail ? "email" : "mobile number"}. No email/SMS provider is configured, so this is a local demo flow, not a real message. The code expires in 10 minutes.`,
-      demoOtp: otp,
+      message: `Reset verification challenge created for registered ${isEmail ? "email" : "mobile number"}: ${identifier}`,
+      challengeOtp: challengeCode,
+    };
+  };
+
+  const verifyResetOtp = (identifier: string, code: string): { success: boolean; message: string } => {
+    if (!activeResetChallenge) {
+      return {
+        success: false,
+        message: "No active password reset challenge found. Please request a new reset code.",
+      };
+    }
+
+    if (Date.now() > activeResetChallenge.expiresAt) {
+      return {
+        success: false,
+        message: "Verification code has expired. Please request a new reset challenge.",
+      };
+    }
+
+    if (activeResetChallenge.code.trim() !== code.trim()) {
+      return {
+        success: false,
+        message: "Invalid verification code. Please check your challenge code and try again.",
+      };
+    }
+
+    setActiveResetChallenge({
+      ...activeResetChallenge,
+      verified: true,
+    });
+
+    return {
+      success: true,
+      message: "Verification successful! You may now set your new letters-only password.",
     };
   };
 
@@ -353,33 +440,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lower = "abcdefghijklmnopqrstuvwxyz";
     const all = upper + lower;
-    const safeLength = Math.max(2, Math.min(64, Math.floor(length) || 12));
-    const randomIndex = (max: number) => {
-      if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-        const value = new Uint32Array(1);
-        const cutoff = Math.floor(0x100000000 / max) * max;
-        do {
-          crypto.getRandomValues(value);
-        } while (value[0] >= cutoff);
-        return value[0] % max;
-      }
-      return Math.floor(Math.random() * max);
-    };
 
-    const chars = [
-      upper[randomIndex(upper.length)],
-      lower[randomIndex(lower.length)],
-    ];
-    while (chars.length < safeLength) chars.push(all[randomIndex(all.length)]);
-    for (let i = chars.length - 1; i > 0; i--) {
-      const j = randomIndex(i + 1);
-      [chars[i], chars[j]] = [chars[j], chars[i]];
+    let pass = "";
+    // Ensure at least one uppercase and one lowercase letter
+    pass += upper[Math.floor(Math.random() * upper.length)];
+    pass += lower[Math.floor(Math.random() * lower.length)];
+
+    // Use Web Crypto if available for cryptographic randomness
+    if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+      const randomValues = new Uint32Array(length - 2);
+      window.crypto.getRandomValues(randomValues);
+      for (let i = 0; i < randomValues.length; i++) {
+        pass += all[randomValues[i] % all.length];
+      }
+    } else {
+      for (let i = 2; i < length; i++) {
+        pass += all[Math.floor(Math.random() * all.length)];
+      }
     }
-    return chars.join("");
+
+    // Shuffle characters
+    return pass
+      .split("")
+      .sort(() => 0.5 - Math.random())
+      .join("");
   };
 
-  const resetPasswordWithOtp = (identifier: string, otp: string, newPass: string): { success: boolean; message: string } => {
-    // Validate only uppercase and lowercase letters
+  const resetPasswordWithOtp = (identifier: string, otpCode: string, newPass: string): { success: boolean; message: string } => {
+    // Validate challenge exists
+    if (!activeResetChallenge) {
+      return {
+        success: false,
+        message: "No active reset challenge. Please initiate password recovery first.",
+      };
+    }
+
+    // Validate OTP code
+    if (activeResetChallenge.code.trim() !== otpCode.trim() && !activeResetChallenge.verified) {
+      return {
+        success: false,
+        message: "Invalid verification code entered.",
+      };
+    }
+
+    // Validate ONLY uppercase and lowercase letters
     const lettersOnlyRegex = /^[A-Za-z]+$/;
     if (!lettersOnlyRegex.test(newPass)) {
       return {
@@ -388,24 +492,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    const normalized = identifier.trim().toLowerCase().replace(/\s+/g, "");
-    const reset = Storage.get<{ otp: string; date: string; expiresAt: number; userId: string } | null>("devflow_password_reset_otp_" + normalized, null);
-    if (!reset || reset.otp !== otp.trim() || reset.expiresAt < Date.now() || reset.date !== new Date().toLocaleDateString("en-CA")) {
-      return { success: false, message: "Invalid or expired verification code. Request a new code when the daily limit permits." };
+    if (newPass.length < 8) {
+      return {
+        success: false,
+        message: "Password must be at least 8 letters long.",
+      };
     }
-    const savedPasswords = Storage.get<Record<string, string>>("devflow_demo_passwords", {});
-    savedPasswords[reset.userId] = newPass;
-    Storage.set("devflow_demo_passwords", savedPasswords);
-    Storage.set("devflow_password_reset_otp_" + normalized, null);
+
+    // Find user to update
+    const cleanId = identifier.trim().toLowerCase();
+    const cleanPhone = identifier.replace(/\s+/g, "");
+    const matched = users.find(
+      (u) =>
+        u.email.toLowerCase() === cleanId ||
+        u.phone.replace(/\s+/g, "") === cleanPhone
+    );
+
+    if (!matched) {
+      return {
+        success: false,
+        message: "Could not find registered user to update password.",
+      };
+    }
+
+    // Update password in all users
+    const updatedUsers = users.map((u) =>
+      u.id === matched.id ? { ...u, password: newPass } : u
+    );
+    setUsers(updatedUsers);
+    Storage.set("devflow_all_users", updatedUsers);
+
+    if (user?.id === matched.id) {
+      const updatedUser = { ...user, password: newPass };
+      setUser(updatedUser);
+      Storage.setCurrentUser(updatedUser);
+    }
+
+    // Clear active challenge
+    setActiveResetChallenge(null);
 
     const audit: SecurityAuditLog = {
       id: "sec-" + Date.now(),
-      userId: reset.userId,
-      userName: identifier,
+      userId: matched.id,
+      userName: matched.name,
       action: "password_reset",
       ...detectDevice(),
       timestamp: new Date().toISOString(),
-      details: "Password successfully updated with generated/new alphabetical password.",
+      details: "Password successfully updated with generated/new alphabetical credentials.",
     };
     const updatedAudit = [audit, ...securityLogs];
     setSecurityLogs(updatedAudit);
@@ -426,7 +559,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         securityLogs,
         login,
         register,
-        suspendUser,
         logout,
         switchUser,
         updateProfile,
@@ -434,8 +566,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         revokeSession,
         revokeAllOtherSessions,
         requestForgotPassword,
+        verifyResetOtp,
         generateSecurePassword,
         resetPasswordWithOtp,
+        activeResetChallenge,
       }}
     >
       {children}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { UserPlus, Mail, Smartphone, Lock, User, ArrowRight } from "lucide-react";
+import { UserPlus, Mail, Smartphone, Lock, User, ArrowRight, AlertCircle } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -16,17 +16,18 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage("");
-    const result = register(name, email, phone, password);
-    if (!result.success) {
-      setErrorMessage(result.message || "Could not create your account.");
-      return;
+    setErrorMsg("");
+
+    const res = register(name, email, phone, password);
+    if (res.success) {
+      router.push("/");
+    } else {
+      setErrorMsg(res.message || "Failed to create account.");
     }
-    router.push("/");
   };
 
   return (
@@ -44,9 +45,10 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {errorMessage && (
-          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-            {errorMessage}
+        {errorMsg && (
+          <div className="p-3.5 rounded-2xl bg-red-50 text-red-800 border border-red-200 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -113,9 +115,7 @@ export default function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  minLength={8}
-                  autoComplete="new-password"
+                  placeholder="••••••••••••"
                   required
                   className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
                 />

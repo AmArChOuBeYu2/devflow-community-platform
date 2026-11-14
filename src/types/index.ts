@@ -21,6 +21,7 @@ export interface UserProfile {
   name: string;
   email: string;
   phone: string;
+  password?: string;
   avatar: string;
   title: string;
   bio: string;
@@ -61,6 +62,7 @@ export interface Question {
   isClosed?: boolean;
   closedReason?: string;
   closeVotes?: string[]; // user IDs who voted to close
+  awardedMilestones?: string[]; // e.g. ["10_votes"]
 }
 
 export interface Answer {
@@ -76,6 +78,7 @@ export interface Answer {
   votes: number;
   votedUserIds: { [userId: string]: 1 | -1 };
   isAccepted: boolean;
+  awardedMilestones?: string[]; // e.g. ["5_votes", "accepted"]
 }
 
 export interface CommunityPost {
@@ -151,7 +154,7 @@ export interface NotificationItem {
   senderId: string;
   senderName: string;
   senderAvatar: string;
-  type: "like" | "comment" | "mention" | "follow" | "reputation" | "security" | "subscription";
+  type: "like" | "comment" | "mention" | "follow" | "reputation" | "security" | "subscription" | "report";
   message: string;
   link?: string;
   isRead: boolean;
@@ -186,7 +189,8 @@ export interface SubscriptionInvoice {
   userEmail: string;
   planTier: UserTier;
   amount: number; // in INR
-  status: "paid" | "failed" | "demo";
+  status: "paid" | "failed" | "demo_verified";
+  isDemo?: boolean;
   paymentMethod: string;
   paymentId: string;
   billingDate: string;

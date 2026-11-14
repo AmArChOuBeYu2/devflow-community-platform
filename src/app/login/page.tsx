@@ -26,7 +26,7 @@ function LoginContent() {
   const { t } = useLanguage();
 
   const [emailOrPhone, setEmailOrPhone] = useState("sc62970@gmail.com");
-  const [password, setPassword] = useState("password");
+  const [password, setPassword] = useState("DevFlow2026");
   const [rememberDevice, setRememberDevice] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState(
@@ -37,7 +37,7 @@ function LoginContent() {
     e.preventDefault();
     setErrorMsg("");
 
-    const res = login(emailOrPhone, rememberDevice, password);
+    const res = login(emailOrPhone, password, rememberDevice);
     if (res.success) {
       router.push("/");
     } else {
@@ -46,7 +46,7 @@ function LoginContent() {
   };
 
   const quickLoginAs = (email: string) => {
-    login(email, true);
+    login(email, "DevFlow2026", true);
     router.push("/");
   };
 

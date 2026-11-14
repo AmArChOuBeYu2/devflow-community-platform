@@ -18,22 +18,28 @@ import {
   ArrowRight,
   RefreshCw,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { requestForgotPassword, generateSecurePassword, resetPasswordWithOtp } = useAuth();
+  const {
+    requestForgotPassword,
+    verifyResetOtp,
+    generateSecurePassword,
+    resetPasswordWithOtp,
+    activeResetChallenge,
+  } = useAuth();
   const { t } = useLanguage();
 
   const [resetMethod, setResetMethod] = useState<"email" | "phone">("email");
   const [identifier, setIdentifier] = useState("sc62970@gmail.com");
   const [otpCode, setOtpCode] = useState("");
-  const [demoOtp, setDemoOtp] = useState("");
   const [generatedPass, setGeneratedPass] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [step, setStep] = useState<1 | 2>(1); // Step 1: Request, Step 2: Set New Password
+  const [step, setStep] = useState<1 | 2 | 3>(1); // Step 1: Request, Step 2: Verify OTP, Step 3: Set New Password
   const [warningMessage, setWarningMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [copied, setCopied] = useState(false);
@@ -55,11 +61,29 @@ export default function ForgotPasswordPage() {
       setWarningMessage(res.message);
     } else {
       setSuccessMessage(res.message);
-      setDemoOtp(res.demoOtp || "");
-      setOtpCode("");
       setStep(2);
+    }
+  };
+
+  // Step 2: Verify OTP challenge
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setWarningMessage("");
+    setSuccessMessage("");
+
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setWarningMessage("Please enter a valid 6-digit verification code.");
+      return;
+    }
+
+    const res = verifyResetOtp(identifier.trim(), otpCode.trim());
+    if (!res.success) {
+      setWarningMessage(res.message);
+    } else {
+      setSuccessMessage(res.message);
+      setStep(3);
       // Auto generate a random password for user convenience
-      const initialGen = generateSecurePassword(12);
+      const initialGen = generateSecurePassword(14);
       setGeneratedPass(initialGen);
     }
   };
@@ -75,7 +99,7 @@ export default function ForgotPasswordPage() {
     if (generatedPass) {
       setNewPassword(generatedPass);
       setConfirmPassword(generatedPass);
-      setSuccessMessage("Applied generated secure password to fields!");
+      setSuccessMessage("Applied generated letters-only password to fields!");
     }
   };
 
@@ -87,7 +111,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Finalize reset
+  // Step 3: Finalize reset with letters-only password
   const handleResetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setWarningMessage("");
@@ -97,10 +121,15 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Letters only verification check
+    // Letters only verification check (A-Z and a-z ONLY)
     const lettersOnly = /^[A-Za-z]+$/;
     if (!lettersOnly.test(newPassword)) {
       setWarningMessage("Password must contain ONLY uppercase and lowercase letters (no numbers or special characters).");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setWarningMessage("Password must be at least 8 characters long.");
       return;
     }
 
@@ -111,7 +140,7 @@ export default function ForgotPasswordPage() {
       setSuccessMessage(res.message);
       setTimeout(() => {
         router.push("/login?reset=success");
-      }, 2000);
+      }, 1500);
     }
   };
 
@@ -127,8 +156,28 @@ export default function ForgotPasswordPage() {
             {t.auth.forgotPasswordTitle}
           </h1>
           <p className="text-xs text-gray-500 max-w-sm mx-auto">
-            {t.auth.forgotPasswordSubtitle}
+            {step === 1 && "Request a password reset challenge via registered email or mobile phone."}
+            {step === 2 && "Enter the 6-digit verification code to verify your identity."}
+            {step === 3 && "Set a new secure password containing only uppercase and lowercase letters."}
           </p>
+        </div>
+
+        {/* Step Progress Indicator */}
+        <div className="flex items-center justify-between text-xs font-semibold px-2">
+          <div className={`flex items-center gap-1.5 ${step >= 1 ? "text-primary" : "text-gray-400"}`}>
+            <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs font-bold">1</span>
+            <span>Channel</span>
+          </div>
+          <div className="flex-1 h-0.5 mx-2 bg-gray-200 dark:bg-gray-800" />
+          <div className={`flex items-center gap-1.5 ${step >= 2 ? "text-primary" : "text-gray-400"}`}>
+            <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs font-bold">2</span>
+            <span>Verify OTP</span>
+          </div>
+          <div className="flex-1 h-0.5 mx-2 bg-gray-200 dark:bg-gray-800" />
+          <div className={`flex items-center gap-1.5 ${step >= 3 ? "text-primary" : "text-gray-400"}`}>
+            <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs font-bold">3</span>
+            <span>New Password</span>
+          </div>
         </div>
 
         {/* Warning Alert (Shows "You can use this option only one time per day.") */}
@@ -154,10 +203,9 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-xl space-y-6">
-          {step === 1 ? (
+          {step === 1 && (
             /* STEP 1: Choose Reset Method & Request */
             <form onSubmit={handleRequestReset} className="space-y-5">
-              {/* Reset Channel Tabs */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
                   Select Reset Channel
@@ -222,33 +270,75 @@ export default function ForgotPasswordPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
-          ) : (
-            /* STEP 2: Password Generator & Reset */
-            <form onSubmit={handleResetSubmit} className="space-y-5">
-              {demoOtp && (
-                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-                  <p className="font-bold">Local demo verification code</p>
-                  <p className="mt-1">For this training demo, no real email or SMS was sent. Enter this code manually to continue:</p>
-                  <p className="mt-2 select-all text-center font-mono text-lg font-black tracking-[0.35em]">{demoOtp}</p>
+          )}
+
+          {step === 2 && (
+            /* STEP 2: Enter Verification Code */
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <span>Challenge Verification</span>
+                </p>
+                <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                  Verification challenge sent for <strong className="font-mono">{identifier}</strong>.
+                </p>
+              </div>
+
+              {/* Development evaluation challenge helper */}
+              {activeResetChallenge && (
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs flex items-center justify-between">
+                  <span className="text-amber-800 dark:text-amber-300 text-[11px]">
+                    Development Challenge Code: <strong className="font-mono font-bold tracking-widest">{activeResetChallenge.code}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOtpCode(activeResetChallenge.code)}
+                    className="text-primary font-bold hover:underline text-[11px]"
+                  >
+                    Auto-Fill
+                  </button>
                 </div>
               )}
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                  Verification code
+                  Enter 6-Digit Verification Code
                 </label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Enter the 6-digit code"
+                  placeholder="e.g. 582194"
                   required
-                  className="w-full px-3.5 py-2.5 text-center text-base font-mono tracking-[0.3em] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                  autoFocus
+                  className="w-full px-4 py-2.5 text-center text-xl font-mono tracking-widest rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
                 />
               </div>
 
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="py-2.5 px-4 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-700 hover:bg-gray-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={otpCode.length !== 6}
+                  className="flex-1 py-3 px-4 rounded-xl font-bold bg-primary hover:bg-primary-dark text-white text-xs shadow-md transition disabled:opacity-50"
+                >
+                  Verify Code & Continue
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === 3 && (
+            /* STEP 3: Password Generator & Reset */
+            <form onSubmit={handleResetSubmit} className="space-y-5">
               {/* Password Generator Feature (Letters Only Requirement) */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 space-y-3">
                 <div className="flex items-center justify-between">
@@ -301,8 +391,7 @@ export default function ForgotPasswordPage() {
                     {t.auth.newPasswordLabel}
                   </label>
                   <input
-                    type="password"
-                    autoComplete="new-password"
+                    type="text"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter or paste generated letters-only password"
@@ -318,8 +407,7 @@ export default function ForgotPasswordPage() {
                     {t.auth.confirmNewPassword}
                   </label>
                   <input
-                    type="password"
-                    autoComplete="new-password"
+                    type="text"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm matching password"

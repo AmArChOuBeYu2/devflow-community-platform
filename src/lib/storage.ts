@@ -31,12 +31,14 @@ const STORAGE_KEYS = {
 };
 
 // Seed Users
-const SEED_USERS: UserProfile[] = [
+export const SEED_USERS: UserProfile[] = [
   {
     id: "user-amar",
     name: "Amar Choubey",
     email: "sc62970@gmail.com",
     phone: "+91 9876543210",
+    password: "DevFlow2026",
+    isSuspended: false,
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     title: "Full Stack Engineer & Community Contributor",
     bio: "Passionate web developer building modern applications with Next.js, React, and TypeScript. Intern at Elevance Skills.",
@@ -60,6 +62,8 @@ const SEED_USERS: UserProfile[] = [
     name: "Sarah Chen",
     email: "sarah.chen@techdev.io",
     phone: "+1 4155552671",
+    password: "DevFlow2026",
+    isSuspended: false,
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
     title: "Staff Frontend Architect",
     bio: "Frontend infrastructure, Web performance, React core fan. Love answering challenging concurrency questions.",
@@ -81,6 +85,8 @@ const SEED_USERS: UserProfile[] = [
     name: "Alex Rivera",
     email: "alex.rivera@devpulse.org",
     phone: "+1 2125550199",
+    password: "DevFlow2026",
+    isSuspended: false,
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
     title: "Backend & Distributed Systems Dev",
     bio: "Node.js, Go, Redis, Microservices architecture. Open source contributor.",
@@ -102,6 +108,8 @@ const SEED_USERS: UserProfile[] = [
     name: "Priya Sharma",
     email: "priya.sharma@cloudlab.in",
     phone: "+91 9123456780",
+    password: "DevFlow2026",
+    isSuspended: false,
     avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
     title: "DevOps & Cloud Engineer",
     bio: "Kubernetes, Docker, CI/CD pipelines, and cloud automation.",
@@ -123,6 +131,8 @@ const SEED_USERS: UserProfile[] = [
     name: "David Kim",
     email: "david.kim@learner.net",
     phone: "+82 1012345678",
+    password: "DevFlow2026",
+    isSuspended: false,
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
     title: "Junior Web Developer",
     bio: "Currently studying JavaScript and React fundamentals.",
@@ -159,6 +169,7 @@ const SEED_QUESTIONS: Question[] = [
     answersCount: 2,
     views: 342,
     acceptedAnswerId: "ans-1",
+    awardedMilestones: ["10_votes"],
   },
   {
     id: "q-2",
@@ -175,6 +186,7 @@ const SEED_QUESTIONS: Question[] = [
     votedUserIds: { "user-sarah": 1, "user-amar": 1 },
     answersCount: 1,
     views: 189,
+    awardedMilestones: [],
   },
   {
     id: "q-3",
@@ -192,6 +204,7 @@ const SEED_QUESTIONS: Question[] = [
     answersCount: 1,
     views: 512,
     acceptedAnswerId: "ans-3",
+    awardedMilestones: ["10_votes"],
   },
 ];
 
@@ -241,6 +254,7 @@ This prevents unnecessary state updates and guarantees no memory leaks upon unmo
     votes: 18,
     votedUserIds: { "user-amar": 1, "user-alex": 1, "user-priya": 1 },
     isAccepted: true,
+    awardedMilestones: ["5_votes", "accepted"],
   },
   {
     id: "ans-2",
@@ -255,6 +269,7 @@ This prevents unnecessary state updates and guarantees no memory leaks upon unmo
     votes: 3,
     votedUserIds: { "user-david": 1 },
     isAccepted: false,
+    awardedMilestones: [],
   },
   {
     id: "ans-3",
@@ -281,11 +296,12 @@ Make sure you pass the raw request buffer or string body rather than parsed JSON
     votes: 9,
     votedUserIds: { "user-alex": 1, "user-sarah": 1 },
     isAccepted: true,
+    awardedMilestones: ["5_votes", "accepted"],
   },
 ];
 
 // Seed Community Posts
-const SEED_POSTS: CommunityPost[] = [
+export const SEED_POSTS: CommunityPost[] = [
   {
     id: "post-1",
     authorId: "user-amar",
@@ -519,10 +535,40 @@ export const Storage = {
 
     if (!localStorage.getItem(STORAGE_KEYS.ALL_USERS)) {
       this.set(STORAGE_KEYS.ALL_USERS, SEED_USERS);
+    } else {
+      // Migrate users to ensure password and isSuspended are always present
+      const existing = this.get<UserProfile[]>(STORAGE_KEYS.ALL_USERS, SEED_USERS);
+      let changed = false;
+      const migrated = existing.map((u) => {
+        let userMod = { ...u };
+        if (!userMod.password) {
+          userMod.password = "DevFlow2026";
+          changed = true;
+        }
+        if (typeof userMod.isSuspended === "undefined") {
+          userMod.isSuspended = false;
+          changed = true;
+        }
+        return userMod;
+      });
+      if (changed) {
+        this.set(STORAGE_KEYS.ALL_USERS, migrated);
+      }
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) {
       this.set(STORAGE_KEYS.CURRENT_USER, SEED_USERS[0]);
+    } else {
+      const curr = this.get<UserProfile>(STORAGE_KEYS.CURRENT_USER, SEED_USERS[0]);
+      if (!curr.password || typeof curr.isSuspended === "undefined") {
+        this.set(STORAGE_KEYS.CURRENT_USER, {
+          ...curr,
+          password: curr.password || "DevFlow2026",
+          isSuspended: curr.isSuspended ?? false,
+        });
+      }
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.QUESTIONS)) {
       this.set(STORAGE_KEYS.QUESTIONS, SEED_QUESTIONS);
     }
@@ -570,13 +616,13 @@ export const Storage = {
           userId: "user-amar",
           userName: "Amar Choubey",
           action: "login_success",
-          browser: "Chrome 128.0 (Windows)",
+          browser: "Chrome (Windows)",
           os: "Windows 11",
           deviceType: "Desktop",
-          ip: "103.87.58.12",
-          location: "Jaipur, Rajasthan, India",
+          ip: "127.0.0.1 (Local Session)",
+          location: "Client Environment",
           timestamp: "2026-10-19T06:30:00Z",
-          details: "Successful authenticated login from trusted device.",
+          details: "Authenticated developer session initialized.",
         },
       ]);
     }
@@ -685,3 +731,7 @@ export const Storage = {
     this.set(STORAGE_KEYS.SECURITY_LOGS, logs);
   },
 };
+
+export const initialUsers = SEED_USERS;
+export const initialPosts = SEED_POSTS;
+

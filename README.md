@@ -1,198 +1,170 @@
 # DevFlow - Developer Community & Knowledge Platform
 ### Elevance Skills Full-Stack Web Development Internship Project Submission
 
-**Live Demo URL:** [https://devflow-community-platform.vercel.app](https://devflow-community-platform.vercel.app)  
+**Live Production URL:** [https://devflow-community-platform.vercel.app](https://devflow-community-platform.vercel.app)  
 **GitHub Repository:** [https://github.com/AmArChOuBeYu2/devflow-community-platform](https://github.com/AmArChOuBeYu2/devflow-community-platform)  
-**Developer / Student:** Amar Choubey (sc62970@gmail.com)  
+**Admin Moderation Route:** [https://devflow-community-platform.vercel.app/admin/moderation](https://devflow-community-platform.vercel.app/admin/moderation)  
+**Student / Intern:** Amar Choubey ([sc62970@gmail.com](mailto:sc62970@gmail.com))  
+**Master Audit Matrix:** [`PROJECT_AUDIT.md`](./PROJECT_AUDIT.md)  
+**End-to-End Test Report:** [`TEST_REPORT.md`](./TEST_REPORT.md)  
+**Environment Variables Template:** [`.env.example`](./.env.example)
 
 ---
 
-## 🚀 Overview
+## 🚀 Project Overview
 
-**DevFlow** is a comprehensive, production-grade Developer Community and Q&A Knowledge Platform built upon the core **Stack Overflow Training Project Foundation** and extended with all **6 Internship Extra Task Features** specified by Elevance Skills.
+**DevFlow** is a full-featured Developer Knowledge and Community Platform inspired by **Stack Overflow**, engineered as the final internship project for Elevance Skills. Built on top of the foundational developer Q&A training project, DevFlow incorporates all **six mandatory internship modules**:
 
-The website is 100% fully responsive across desktop, laptop, tablet, and mobile devices, engineered with modern Next.js 15 App Router, TypeScript, Tailwind CSS, Lucide icons, and jsPDF.
-
----
-
-## 📋 Comprehensive Feature Implementation Matrix
-
-### 🧱 Training Project Foundation: Stack Overflow Core Engine
-* **Questions Engine:** Ask public questions, view detailed questions, upvote/downvote questions, question tags, and view counter.
-* **Answers Engine:** Post answers, upvote/downvote answers, and mark accepted answers (author-only privilege).
-* **Tagging & Filtering:** Tag taxonomy system (`#react`, `#typescript`, `#nextjs`, `#elevanceskills`, etc.).
-* **User Accounts & Profiles:** User profiles with avatars, titles, bios, reputation points, and role badges.
+1. **Community Feed & Social Platform** (Updates, code snippets, project showcases, achievements, hashtags, mentions, threaded comments, replies, sharing, bookmarks, reporting, and admin moderation).
+2. **Forgot Password & Letters-Only Password Generator** (Dual recovery via registered email or mobile phone, strict 1 request per calendar day rate limiting, 6-digit challenge code verification, and cryptographic password generator containing strictly uppercase and lowercase letters `[A-Za-z]`).
+3. **Subscriptions & Premium Membership** (Free, Bronze @ ₹99/mo, Silver @ ₹299/mo, Gold @ ₹999/mo tiers with daily question quotas, advanced search privileges, bookmark quotas, simulated Razorpay checkout with evaluation sandbox notice, and official downloadable GST tax invoice PDFs).
+4. **Reputation Engine & Community Transfers** (Comprehensive reward rules: +5 answer posting, +10 accepted solution, +2 for 10 question upvotes [idempotent], +5 for 5 answer upvotes [idempotent], -2 downvotes, -5 answer deletion, -10 admin guideline violation removal; privilege thresholds at 50, 100, 250, and 500 reputation points; peer-to-peer reputation transfers with strict guards: >50 balance, ≤50/tx, ≤100/day).
+5. **Multi-Language Support with Security Verification** (English, Spanish, Hindi, Portuguese, Chinese, French; French requires Email OTP challenge; other five languages require Mobile OTP challenge; language switch applied only upon verified challenge).
+6. **Advanced Login Security, Session Management & Device Telemetry** (Multi-device session tracking, real client header detection via `/api/auth/session`, remote session revocation, session timeout management, and administrator moderation and suspension center).
 
 ---
 
-### 🌟 Task 1: Community Feed & Social Interaction Platform
-* **Post Types:**
-  * **Tech Updates:** Plain text updates with optional image URL attachments.
-  * **Code Snippets:** Syntax-highlighted code blocks with multi-language selector (TypeScript, JavaScript, Python, Go, Rust) and one-click clipboard copying.
-  * **Project Showcases:** Project title, live preview URL, and GitHub repository links.
-  * **Learning Achievements:** Milestone celebrations with custom badge titles.
-* **Social Engagement:**
-  * **Likes & Unlikes:** Real-time engagement counter with red heart feedback.
-  * **Threaded Nested Comments:** Comment on any post with support for multi-level nested replies.
-  * **Social Share:** Automatic shareable URL generator with one-click clipboard copy.
-  * **Bookmarking:** Save posts to personal bookmarks (Free/Bronze: 5 max, Silver/Gold: unlimited).
-  * **Post Editing:** Authors can edit their posts anytime, OR users with **100+ reputation points** unlock community post editing privileges.
-  * **Post Deletion:** Authors or administrators can delete posts.
-* **Following Graph:** Follow and unfollow community creators to switch between **Global Feed** and personalized **Following Feed**.
-* **Trending Algorithm:** Top posts ranked dynamically based on engagement score:  
-  $$\text{Score} = (\text{Likes} \times 2) + (\text{Comments} \times 3) + (\text{Shares} \times 4)$$
-* **Hashtag Discovery:** Clickable hashtags (`#react`, `#webdev`, etc.) to instantly filter feed posts.
-* **Notification System:** In-app real-time notification dropdown for likes, comments, mentions (`@username`), and new followers.
-* **Reporting & Admin Moderation:**
-  * Community members can flag inappropriate posts with custom report reasons.
-  * **Admin Moderation Dashboard (`/admin/moderation`):** Review pending reports, remove violating content (-10 reputation penalty to author), and suspend repeat offenders (-50 points penalty).
-* **Performance:** Optimized infinite scrolling and server-side pagination simulation.
+## 🧪 Evaluator Demo Credentials
+
+Use the **"Switch User"** pill in the top navigation bar or log in manually at `/login`:
+
+| User Name | Role | Email | Phone | Password | Tier | Initial Rep |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Amar Choubey** | Administrator | `sc62970@gmail.com` | `+91 9876543210` | `DevFlow2026` | Bronze | 125 |
+| **Sarah Chen** | Senior Contributor | `sarah.chen@elevance.edu` | `+91 9811223344` | `DevFlow2026` | Silver | 640 |
+| **Alex Rivera** | VIP Master | `alex.rivera@techflow.dev` | `+91 9877001122` | `DevFlow2026` | Gold | 1,420 |
+| **Priya Patel** | New Contributor | `priya.patel@devflow.org` | `+91 9766554433` | `DevFlow2026` | Free | 45 |
 
 ---
 
-### 🔑 Task 2: Forgot Password & Secure Letters-Only Password Generator
-* **Dedicated Route:** Accessible via `/forgot-password`.
-* **Dual Recovery Methods:** Reset credentials using either:
-  * Registered Email Address
-  * Registered Mobile Phone Number
-* **Strict Rate Limiter (Once Per Day):**
-  * If a user requests password reset a second time on the same calendar day, the system strictly returns the warning:  
-    > **“You can use this option only one time per day.”**
-* **Strict Password Generator:**
-  * Generates random, cryptographically secure passwords that **MUST contain ONLY uppercase and lowercase letters (`[A-Za-z]`)**, with **NO numbers and NO special characters**.
-  * Includes one-click copy and "Use This Password" instant applicator.
+## 🛠️ Tech Stack & Architecture
+
+- **Framework:** Next.js 15.5.28 (App Router, Server & Client Components)
+- **Language:** TypeScript 5 (Strict Mode, 100% Type-Safe)
+- **Styling:** Tailwind CSS 4 (Responsive on Mobile, Tablet & Desktop)
+- **Icons:** Lucide React
+- **PDF Generation:** jsPDF (Itemized GST Invoices)
+- **Hosting:** Vercel Production (`https://devflow-community-platform.vercel.app`)
 
 ---
 
-### 💳 Task 3: Subscription & Premium Membership System (Razorpay)
-* **Tiered Membership Structure:**
-  | Plan | Price | Question Limit | Profile Badge | Key Unlocks |
+## 📋 Requirements & Features Breakdown
+
+### 🧱 Training Foundation: Stack Overflow Q&A Engine
+- **Top Questions Feed:** Displayed immediately at the top of the homepage with tabs for *Newest*, *Most Voted*, and *Unanswered*.
+- **Question Lifecycle:** Detailed question view, answers list, view counters, tags taxonomy.
+- **Fair-Play Safeguards:** Self-voting on questions or answers is strictly disallowed; question authors cannot earn self-reputation by accepting their own answers; closed questions are barred from receiving new answers.
+- **Idempotent Milestones:** Question reaching 10 upvotes awards +2 points strictly once; answer reaching 5 upvotes awards +5 points strictly once.
+
+### 🌟 Task 1: Community Feed & Social Platform
+- **4 Post Types:** Technical updates, syntax-highlighted code snippets, project showcases (live URL + GitHub), learning achievements.
+- **Interactions:** Likes, threaded comments, nested replies, social share with URL copy, bookmarks.
+- **Trending Posts Algorithm:** $\text{Score} = (\text{Likes} \times 2) + (\text{Comments} \times 3) + (\text{Shares} \times 4)$.
+- **Server-Side Paginated API:** `/api/community/posts?page=1&limit=10&sort=trending`.
+- **Reporting & Moderation:** Members with 500+ reputation points can flag violating content. Administrators review reports in `/admin/moderation` with options to resolve/delete (-10 rep penalty) or suspend repeat offenders (-50 rep penalty, `isSuspended: true`).
+
+### 🔑 Task 2: Forgot Password & Letters-Only Password Generator
+- **Dedicated Route:** `/forgot-password`.
+- **Dual Channels:** Account lookup and recovery via registered Email or Mobile Number.
+- **Strict 1-Per-Day Rate Limiting:** Enforces maximum 1 request per calendar day. Repeated requests within the same day return the exact required message:
+  > **“You can use this option only one time per day.”**
+- **6-Digit Challenge Verification:** Requires code challenge verification before presenting the password reset input.
+- **Letters-Only Password Generator:** Cryptographically generates passwords containing **ONLY uppercase and lowercase letters (`[A-Za-z]`)**, strictly verified by regex `^[A-Za-z]+$` with zero numbers and zero special characters.
+
+### 💳 Task 3: Subscription & Premium Membership System
+- **Tier Structure:**
+  | Plan | Price | Question Limit | Profile Badge | Features Unlocked |
   | :--- | :--- | :--- | :--- | :--- |
-  | **Free** | ₹0 | 1 question / day | Community Member | Basic text search, standard voting |
-  | **Bronze** | ₹99 / mo | 5 questions / day | Bronze Supporter | Advanced search filters (tags, status, votes) |
-  | **Silver** | ₹299 / mo | 15 questions / day | Silver Champion | Priority support, enhanced visibility, unlimited bookmarks |
-  | **Gold** | ₹999 / mo | Unlimited / day | Gold VIP Master | Highest search priority, featured profile, VIP support |
-* **Daily Question Limit Enforcement:** The system automatically checks the user's active tier and blocks attempts to post questions once the daily quota is reached.
-* **Razorpay Gateway Simulation:** Authentic checkout modal featuring UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, and NetBanking.
-* **Instant Activation & Unique Invoices:** Successful payments activate the plan instantly, create a unique invoice ID (e.g., `INV-2026-XXXX`), and dispatch in-app notifications.
-* **Downloadable Tax Invoices (PDF):** Integrated with `jspdf` to generate and download official, GST-compliant PDF invoices with complete billing breakdowns.
+  | **Free** | ₹0 | 1 / day | Community Member | Basic text search, standard voting, 5 bookmarks |
+  | **Bronze** | ₹99 / mo | 5 / day | Bronze Supporter | Advanced search filters (tags, status, votes) |
+  | **Silver** | ₹299 / mo | 15 / day | Silver Champion | Priority support, enhanced visibility, unlimited bookmarks |
+  | **Gold** | ₹999 / mo | Unlimited | Gold VIP Master | Top search priority, featured profile, VIP support |
+- **Razorpay Checkout:** Realistic gateway modal supporting UPI (Google Pay, PhonePe, Paytm), Cards, and NetBanking with transparent evaluation sandbox mode notice.
+- **Downloadable PDF Tax Invoices:** Official tax invoices generated via `jspdf` featuring subtotal, 18% IGST calculation breakdown, and GSTIN.
+
+### 🏆 Task 4: Reputation Points System & Transfers
+- **Point Triggers:**
+  - Post an answer: **+5 points**
+  - Accepted solution: **+10 points**
+  - Answer reaches 5 upvotes milestone: **+5 points (one-time)**
+  - Question reaches 10+ upvotes milestone: **+2 points (one-time)**
+  - Complete profile: **+10 points (one-time)**
+  - Downvote received: **-2 points**
+  - Answer deleted by author: **-5 points**
+  - Content removed by administrator for violations: **-10 points**
+- **Privilege Thresholds:** 50 pts (Comment freely), 100 pts (Edit community posts), 250 pts (Vote to close questions), 500 pts (Report content).
+- **Reputation Transfers:** Peer-to-peer transfers requiring >50 points sender balance, max 50 points per transaction, max 100 points per day, with self-transfers barred.
+- **Public Reputation Activity Ledger:** Displayed at `/profile` and `/users/[id]` with timestamped records for every point change.
+
+### 🌐 Task 5: Multi-Language OTP Verification
+- **6 Supported Languages:** English (`en`), Spanish (`es`), Hindi (`hi`), Portuguese (`pt`), Chinese (`zh`), French (`fr`).
+- **Channel Routing Rule:**
+  - Switching to **French** dispatches an OTP challenge to the user's **registered email address**.
+  - Switching to any of the **other 5 languages** dispatches an OTP challenge to the user's **registered mobile phone number**.
+- **Security Guard:** The target language is applied and persisted only after the 6-digit OTP challenge is verified.
+
+### 🛡️ Task 6: Login Sessions & Device Management
+- **Device Telemetry:** Server-side request inspection via `/api/auth/session` detecting real Client IP, User-Agent, Operating System, Browser engine, and Device Type.
+- **Session Management (`/profile/security`):** Active sessions list, individual remote session revocation, and "Revoke All Other Sessions" button.
+- **Inactivity Timeout:** Configurable session expiry (15m, 30m, 1h, 24h, 7d).
+- **Account Suspension Guard:** Suspended accounts are barred from asking questions, posting answers, creating feed posts, commenting, reacting, and voting.
 
 ---
 
-### 🏆 Task 4: Reputation & Community Reward System
-* **Reputation Point Triggers:**
-  * Post an answer: **+5 points**
-  * Answer marked as accepted solution: **+10 points**
-  * Answer reaches 5 upvotes milestone: **+5 additional points**
-  * Question reaches 10+ upvotes milestone: **+2 points**
-  * Complete profile with mandatory details: **+10 points (one-time bonus)**
-  * Downvote received: **-2 points**
-  * Answer deleted by user: **-5 points**
-  * Content removed by administrator for violations: **-10 points**
-* **Privilege Thresholds:**
-  * **50 points:** Comment without restrictions
-  * **100 points:** Edit community posts
-  * **250 points:** Vote to close questions
-  * **500 points:** Report inappropriate content
-* **Reputation Transfer System:**
-  * Allowed only if sender has **> 50 reputation points**.
-  * Transfer limits: **Max 50 points per transaction**, **Max 100 points per day**.
-  * Recorded in complete transaction history with sender, receiver, timestamp, and reason.
-* **Dedicated Public Activity Ledger:** Transparent log displayed on the public profile (`/users/[id]`) showing every single reputation increase/decrease, reason, and timestamp.
+## ⚡ Environment Variables & Production Integration
+
+See [`.env.example`](./.env.example) for configuration:
+
+```env
+# Production Razorpay Keys (Leave empty for simulated evaluation sandbox mode)
+NEXT_PUBLIC_RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+
+# Email Dispatcher (SMTP / Resend)
+EMAIL_SERVER_HOST=smtp.gmail.com
+EMAIL_SERVER_PORT=587
+EMAIL_SERVER_USER=
+EMAIL_SERVER_PASSWORD=
+
+# SMS Dispatcher (Twilio)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+```
+
+> **Evaluation Sandbox Notice:** When external API keys are not provided, DevFlow runs in an evaluation sandbox mode that simulates checkout, OTP delivery, and session detection with transparent UI labeling, allowing mentors and evaluators to test all flows without incurring transaction charges or requiring SMS gateway credits.
 
 ---
 
-### 🌐 Task 5: Multi-Language Functionality with Security Verification
-* **6 Supported Languages:** English (`en`), Spanish (`es`), Hindi (`hi`), Portuguese (`pt`), Chinese (`zh`), and French (`fr`).
-* **Security Verification Before Language Switch:**
-  * **Switch to French:** Verifies user's identity by sending an OTP to their **registered email address**.
-  * **Switch to Other Languages (EN, ES, HI, PT, ZH):** Authenticates the user by sending an OTP to their **registered mobile number**.
-  * Interactive modal appears requiring 6-digit OTP verification prior to applying the localization state.
+## 🧪 Running the Verification Suite
 
----
-
-### 🛡️ Task 6: Advanced Login Security & Device Management
-* **Login Telemetry:** Captures Browser, Operating System, Device Type (Desktop/Mobile/Tablet), IP Address, Login Location, and Timestamp for every session.
-* **Session Dashboard (`/profile/security`):**
-  * View all active sessions with device badges.
-  * One-click remote session revocation.
-  * "Revoke All Other Sessions" button.
-* **Security Alerts:** Simulated email alert dispatched whenever a login is detected from an unrecognized device.
-* **Trusted Devices:** "Remember this trusted device" toggle.
-* **Configurable Inactivity Expiry:** Auto-expire idle sessions after 15 mins, 30 mins, 1 hr, 24 hrs, or 7 days.
-* **Admin Audit Logs:** Dedicated security monitoring table in `/admin/moderation` for platform defense.
-
----
-
-## 🛠️ Tech Stack
-
-* **Framework:** Next.js 15 (App Router, Server & Client Components)
-* **Language:** TypeScript 5 (Strict Mode)
-* **Styling:** Tailwind CSS (Fully Responsive, Dark & Light mode compatible)
-* **Icons:** Lucide React
-* **PDF Invoicing:** jsPDF
-* **Deployment Target:** Vercel / Netlify
-
----
-
-## 🧪 Evaluator & Mentor Testing Accounts
-
-Use the **"Switch User"** pill in the top navigation bar to test different roles and tiers with 1 click:
-
-1. **Amar Choubey** (Bronze Tier • 125 Rep • Admin Role)
-   * Email: `sc62970@gmail.com`
-   * Mobile: `+91 9876543210`
-2. **Sarah Chen** (Gold Tier • 1,480 Rep • Unlimited Questions & VIP Perks)
-   * Email: `sarah.chen@techdev.io`
-3. **Alex Rivera** (Silver Tier • 630 Rep • 15 Questions / Day)
-   * Email: `alex.rivera@devpulse.org`
-4. **David Kim** (Free Tier • 40 Rep • 1 Question / Day)
-   * Email: `david.kim@learner.net`
-
----
-
-## 📹 Video Demo Walkthrough Script (2–5 Minutes)
-
-1. **Introduction (0:00 - 0:30):**
-   * State your name: Amar Choubey.
-   * Mention the training project foundation (Stack Overflow Clone) and how the 6 internship tasks were seamlessly engineered into it.
-2. **Core Q&A & Daily Limits (0:30 - 1:15):**
-   * Show asking a question and how the daily limit adapts based on the active plan (Free: 1/day, Bronze: 5/day, etc.).
-   * Show voting on questions and answers, and marking an accepted answer (+10 reputation).
-3. **Community Feed & Social Platform (1:15 - 2:00):**
-   * Demonstrate posting a code snippet and project showcase.
-   * Like, comment with a nested reply, share, and bookmark.
-   * Switch between "Global Feed" and "Following Feed".
-4. **Forgot Password & Password Generator (2:00 - 2:45):**
-   * Navigate to `/forgot-password`.
-   * Trigger password reset and show the 1-per-day warning if re-attempted.
-   * Click "Generate Random Password" and highlight that it generates letters only (no numbers, no special characters).
-5. **Subscriptions & PDF Invoices (2:45 - 3:30):**
-   * Open `/pricing`, select a plan, and open the Razorpay modal.
-   * Complete payment, show instant plan activation, and click "Download Invoice (PDF)".
-6. **Multi-Language OTP & Security Sessions (3:30 - 4:15):**
-   * Switch language to French -> Show Email OTP verification modal.
-   * Switch to Hindi/Spanish -> Show Mobile OTP verification modal.
-   * Go to `/profile/security`, show active sessions, and demonstrate remote session revocation.
-7. **Conclusion (4:15 - 4:45):**
-   * Show the Admin Moderation Dashboard with flagged content and audit logs.
-   * Thank the mentor and Elevance Skills team!
-
----
-
-## 🚢 Local Development Instructions
+Run the automated test suite locally:
 
 ```bash
-# 1. Install dependencies
-npm install
+# Run unit & boundary verification test suite
+node scripts/verify-requirements.mjs
 
-# 2. Run local development server
-npm run dev
-
-# 3. Build for production
+# Run production Next.js build
 npm run build
-
-# 4. Start production server
-npm run start
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 📹 Video Demo Walkthrough Guide (2–5 Minutes)
+
+1. **Introduction (0:00 - 0:30):** State your name (Amar Choubey) and introduce DevFlow as the Elevance Skills internship submission built upon the Stack Overflow training foundation.
+2. **Core Q&A & Daily Quotas (0:30 - 1:15):** Show the homepage Top Questions feed, upvoting, answering (+5 rep), and how daily question limits adapt based on tier (Free: 1/day, Bronze: 5/day).
+3. **Community Feed & Moderation (1:15 - 2:00):** Show posting a snippet/showcase, liking, commenting, and reporting content (500+ rep privilege). Show admin moderation at `/admin/moderation`.
+4. **Forgot Password (2:00 - 2:45):** Demonstrate `/forgot-password`, trigger the 1-per-day rate limit warning (*"You can use this option only one time per day."*), verify OTP, and click "Generate Random Password" highlighting letters-only `[A-Za-z]`.
+5. **Subscriptions & PDF Invoices (2:45 - 3:30):** Open `/pricing`, select Silver plan, complete simulated Razorpay checkout, and download the GST tax invoice PDF with 18% IGST breakdown.
+6. **Multi-Language OTP & Security (3:30 - 4:15):** Switch to French (triggers Email OTP) vs Hindi/Spanish (triggers Mobile OTP). Open `/profile/security` to show active sessions and revoke remote sessions.
+7. **Conclusion (4:15 - 4:45):** Highlight the 100% automated test pass rate and thank the Elevance Skills team!
+
+---
+
+## 👨‍💻 Developer & Student Information
+
+- **Name:** Amar Choubey
+- **Email:** sc62970@gmail.com
+- **GitHub:** [https://github.com/AmArChOuBeYu2](https://github.com/AmArChOuBeYu2)
+- **Internship Organization:** Elevance Skills
